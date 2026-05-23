@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import fal_client; print\\(fal_client.__version__\\)\")",
+      "Bash(python3 -c \"import fal_client; import inspect; print\\(inspect.getsource\\(fal_client.subscribe\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(open /tmp/test_ux.html)",
+      "Bash(python3)",
+      "Bash(bash build.sh)",
+      "Bash(pyinstaller ShortFlow.spec -y)",
+      "Bash(python3 /Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/generate_report.py)",
+      "Bash(open /Users/mathiaskunze/Downloads/ShortFlow_Marktbericht_Mai2026.pdf)"
+    ]
+  }
+}

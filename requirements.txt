@@ -1,0 +1,7 @@
+customtkinter
+openai
+fal-client
+pandas
+openpyxl
+requests
+Pillow
