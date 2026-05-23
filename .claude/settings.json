@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(ls*)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)",
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(pytest*)",
+      "Bash(python3 -c ' *)",
+      "Bash(sudo rm -rf /Library/Caches/com.apple.iconservices.store)",
+      "Bash(sudo find /var/folders -name \"com.apple.dock.iconcache\" -delete)",
+      "Bash(sudo find /var/folders -name \"com.apple.iconservices\" -delete)",
+      "Bash(killall Dock)",
+      "Bash(md5 /Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/dist/ShortFlow.app/Contents/Resources/icon.icns)",
+      "Bash(codesign -dv \"/Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/dist/ShortFlow.app\")",
+      "Bash(codesign --force --deep --sign - \"/Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/dist/ShortFlow.app\")",
+      "Bash(codesign --verify --deep \"/Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/dist/ShortFlow.app\")",
+      "Bash(killall iconservicesd *)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(curl -s --max-filesize 5000000 \"https://api.anthropic.com/v1/design/h/vGNIayAFa7rnbSOEl-7SYw?open_file=ShortFlow+Table.html\")",
+      "Bash(curl -s --compressed \"https://api.anthropic.com/v1/design/h/vGNIayAFa7rnbSOEl-7SYw?open_file=ShortFlow+Table.html\")",
+      "Bash(curl -s -H \"Accept: text/html,application/xhtml+xml\" -H \"Accept-Encoding: identity\" \"https://api.anthropic.com/v1/design/h/vGNIayAFa7rnbSOEl-7SYw?open_file=ShortFlow+Table.html\")",
+      "Bash(cp /Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/ShortFlow-Icon.png /tmp/sf-logo-orig.png)",
+      "Bash(sips -Z 54 /tmp/sf-logo-orig.png --out /tmp/sf-logo-54.png)",
+      "Read(//tmp/**)",
+      "Bash(sips -Z 70 /tmp/sf-logo-orig.png --out /tmp/sf-logo-70.png)",
+      "Read(//private/tmp/**)"
+    ]
+  }
+}
