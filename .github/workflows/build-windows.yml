@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: EXE bauen
-        run: pyinstaller ShortFlow-windows.spec --clean
+        run: pyinstaller ShortFlow-windows.spec --clean --noconfirm
 
       - name: EXE als Download bereitstellen
         uses: actions/upload-artifact@v4
