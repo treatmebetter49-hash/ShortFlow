@@ -11,7 +11,19 @@ from typing import Callable
 import customtkinter as ctk
 import pandas as pd
 
-from modules import brain, table
+from modules import brain, table, netlify_telegram, config_manager
+
+def _unique_html_path(base: Path) -> Path:
+    if not base.exists():
+        return base
+    stem, suffix, parent = base.stem, base.suffix, base.parent
+    i = 2
+    while True:
+        candidate = parent / f"{stem}-{i}{suffix}"
+        if not candidate.exists():
+            return candidate
+        i += 1
+
 
 _PREVIEW_COLS = ["Short", "Datum", "Tag", "Hook", "Text", "Titel", "Status"]
 _COL_WIDTHS = {"Short": 80, "Datum": 70, "Tag": 50, "Hook": 160, "Text": 160, "Titel": 140, "YTBeschreibung": 160, "IGBeschreibung": 160, "Prompts": 200, "Status": 90}
@@ -21,16 +33,18 @@ _MONTHS_DE = ["Januar", "Februar", "März", "April", "Mai", "Juni",
 
 
 class BrainTab(ctk.CTkFrame):
-    def __init__(self, master, get_config: Callable, on_go_to_machine: Callable):
+    def __init__(self, master, get_config: Callable, on_go_to_machine: Callable, get_scan_result: Callable | None = None):
         super().__init__(master, fg_color="transparent")
         self._get_config = get_config
         self._on_go_to_machine = on_go_to_machine
+        self._get_scan_result = get_scan_result
         self._df: pd.DataFrame | None = None
         self._project_dir = None
         self._html_path: Path | None = None
         self._file_stem = "Short-Tabelle"
         self._animating = False
-        self._progress_val = 0.0
+        self._elapsed_secs = 0
+        self._current_phase = 0
         self._build()
 
     def _build(self):
@@ -53,7 +67,7 @@ class BrainTab(ctk.CTkFrame):
 
         ctk.CTkLabel(top, text="Thema:").pack(side="left")
         self._topic_var = tk.StringVar()
-        ctk.CTkEntry(top, textvariable=self._topic_var, width=300).pack(side="left", padx=(8, 20))
+        ctk.CTkEntry(top, textvariable=self._topic_var, width=150).pack(side="left", padx=(8, 20))
 
         # Container hält beide Modi — nimmt feste Position ein
         _cnt = ctk.CTkFrame(top, fg_color="transparent")
@@ -126,6 +140,10 @@ class BrainTab(ctk.CTkFrame):
             command=self._go_to_machine,
         ).pack(side="left")
         ctk.CTkButton(
+            bot, text="iPhone IG Export",
+            command=self._save_ig_html,
+        ).pack(side="left", padx=(16, 0))
+        ctk.CTkButton(
             bot, text="Vorhandene Tabelle laden",
             command=self._load_project,
         ).pack(side="right")
@@ -151,8 +169,22 @@ class BrainTab(ctk.CTkFrame):
         count = self._get_count()
         cfg = self._get_config()
         start_date = self._get_start_date()
-        self._set_status("Tabelle wird erstellt... 0%", busy=True)
-        threading.Thread(target=self._generate, args=(topic, count, cfg["openai_key"], start_date), daemon=True).start()
+        provider = cfg.get("provider", "openai")
+        api_key = cfg.get("gemini_key", "") if provider == "gemini" else cfg.get("openai_key", "")
+        fallback_provider = "openai" if provider == "gemini" else "gemini"
+        fallback_key = cfg.get("openai_key", "") if provider == "gemini" else cfg.get("gemini_key", "")
+        start_num = 1
+        existing_hooks: list[str] = []
+        if self._get_scan_result:
+            scan = self._get_scan_result()
+            start_num = scan.next_short_num
+            existing_hooks = scan.existing_hooks
+        self._set_status("", busy=True)
+        threading.Thread(
+            target=self._generate,
+            args=(topic, count, api_key, start_date, provider, fallback_key, fallback_provider, start_num, existing_hooks),
+            daemon=True,
+        ).start()
 
     def _on_mode_change(self):
         if self._mode_var.get() == "einzeln":
@@ -193,9 +225,9 @@ class BrainTab(ctk.CTkFrame):
             return _dt.date(year, month, 1)
         return _dt.date.today()
 
-    def _generate(self, topic: str, count: int, key: str, start_date=None):
+    def _generate(self, topic: str, count: int, key: str, start_date=None, provider: str = "openai", fallback_key: str = "", fallback_provider: str = "", start_num: int = 1, existing_hooks: list[str] | None = None):
         try:
-            df = brain.generate_table(topic, count, key, start_date=start_date)
+            df = brain.generate_table(topic, count, key, start_date=start_date, provider=provider, fallback_key=fallback_key, fallback_provider=fallback_provider, start_num=start_num, existing_hooks=existing_hooks)
             self.after(0, self._on_success, df)
         except Exception as exc:
             import traceback
@@ -206,6 +238,7 @@ class BrainTab(ctk.CTkFrame):
 
     def _on_success(self, df: pd.DataFrame):
         self._animating = False
+        self._current_phase = 0
         self._progress_bar.set(1.0)
         self._df = df
         self._render_table(df)
@@ -218,19 +251,21 @@ class BrainTab(ctk.CTkFrame):
             output_dir = filedialog.askdirectory(title="Output-Ordner wählen")
         if output_dir:
             import re
-            self._project_dir = brain.make_project_dir(topic, output_dir)
+            start_date = self._get_start_date()
+            self._project_dir = brain.make_project_dir(topic, output_dir, month=start_date.month, year=start_date.year)
             clean = re.sub(r"[^\w\s-]", "", topic)
             clean = re.sub(r"\s+", "-", clean)
             clean = re.sub(r"-{2,}", "-", clean)
             clean = clean[:40]
             self._file_stem = f"{clean}-Short-Tabelle" if clean else "Short-Tabelle"
             self._auto_save_html(df, topic)
-            self._status_lbl.configure(text=f"{len(df)} Shorts ✓  →  {self._project_dir.name}")
+            self._status_lbl.configure(text=f"{len(df)} Shorts ✓  →  {topic}")
         else:
             self._status_lbl.configure(text=f"{len(df)} Shorts geladen ✓")
 
     def _on_error(self, msg: str):
         self._animating = False
+        self._current_phase = 0
         self._progress_bar.set(0)
         self._gen_btn.configure(state="normal")
         self._status_lbl.configure(text="Fehler")
@@ -245,26 +280,92 @@ class BrainTab(ctk.CTkFrame):
 
     def _auto_save_html(self, df: pd.DataFrame, topic: str):
         try:
-            html_path = self._project_dir / f"{self._file_stem}.html"
-            table.save_html(df, html_path, topic=topic, music_config=self._music_config())
+            base_path = self._project_dir / f"{self._file_stem}.html"
+            html_path = base_path
+            table.append_to_html(df, html_path, topic=topic, music_config=self._music_config())
             table.save_prompts_json(df, self._project_dir / ".prompts.json")
+            errors = table.validate_html(html_path)
+            if errors:
+                print(f"[HTML VALIDATION FEHLER] {errors}")
             self._html_path = html_path
             self._open_btn.configure(state="normal")
         except Exception as exc:
             print(f"[HTML AUTO-SAVE FEHLER] {exc}")
 
+    def _save_ig_html(self):
+        if self._df is None:
+            messagebox.showwarning("Fehler", "Keine Tabelle vorhanden.")
+            return
+        try:
+            if self._project_dir:
+                base_path = self._project_dir / f"{self._file_stem}-IG.html"
+                ig_path = _unique_html_path(base_path)
+            else:
+                p = filedialog.asksaveasfilename(
+                    defaultextension=".html",
+                    filetypes=[("HTML", "*.html")],
+                    initialfile=f"{self._file_stem}-IG",
+                )
+                if not p:
+                    return
+                ig_path = Path(p)
+            table.save_ig_html(self._df, ig_path, topic=self._topic_var.get().strip())
+            self._status_lbl.configure(text=f"IG Export: {ig_path.name}")
+            webbrowser.open(ig_path.as_uri())
+
+            # Netlify + Telegram (optional — nur wenn Tokens gesetzt)
+            cfg = config_manager.load()
+            netlify_token = cfg.get("netlify_token", "")
+            tg_bot = cfg.get("telegram_bot_token", "")
+            tg_chat = cfg.get("telegram_chat_id", "")
+            if netlify_token and tg_bot and tg_chat:
+                def _deploy():
+                    try:
+                        self._status_lbl.configure(text="Lade auf Netlify hoch...")
+                        site_id = cfg.get("netlify_site_id", "")
+                        live_url = netlify_telegram.upload_to_netlify(ig_path, netlify_token, site_id)
+                        topic = self._topic_var.get().strip()
+                        netlify_telegram.send_telegram(
+                            tg_bot, tg_chat,
+                            f"📱 <b>ShortFlow IG Export</b>\n{topic}\n\n{live_url}"
+                        )
+                        self._status_lbl.configure(text=f"✅ Telegram-Link gesendet")
+                    except Exception as exc:
+                        self._status_lbl.configure(text=f"Netlify/Telegram Fehler: {exc}")
+                threading.Thread(target=_deploy, daemon=True).start()
+        except Exception as exc:
+            messagebox.showerror("IG Export fehlgeschlagen", str(exc))
+
     def _open_html(self):
         if self._html_path and self._html_path.exists():
             webbrowser.open(self._html_path.as_uri())
 
-    def _tick_progress(self):
+    def _advance_phase(self, phase: int):
         if not self._animating:
             return
-        self._progress_val += (0.9 - self._progress_val) * 0.08
-        self._progress_bar.set(self._progress_val)
-        pct = int(self._progress_val * 100)
-        self._status_lbl.configure(text=f"Tabelle wird erstellt... {pct}%")
-        self.after(500, self._tick_progress)
+        _PHASES = [
+            (0.25, "1/4 Anfrage wird vorbereitet"),
+            (0.50, "2/4 Inhalte werden generiert"),
+            (0.75, "3/4 Antwort wird geprüft"),
+            (0.95, "4/4 Tabelle wird gebaut · 0s"),
+        ]
+        self._current_phase = phase
+        self._progress_bar.set(_PHASES[phase - 1][0])
+        self._status_lbl.configure(text=_PHASES[phase - 1][1])
+        if phase == 2:
+            self.after(6000, lambda: self._advance_phase(3))
+        elif phase == 3:
+            self.after(5000, lambda: self._advance_phase(4))
+        elif phase == 4:
+            self._elapsed_secs = 0
+            self._tick_phase4()
+
+    def _tick_phase4(self):
+        if not self._animating or self._current_phase != 4:
+            return
+        self._elapsed_secs += 1
+        self._status_lbl.configure(text=f"4/4 Tabelle wird gebaut · {self._elapsed_secs}s")
+        self.after(1000, self._tick_phase4)
 
     # ── Table rendering ───────────────────────────────────────────────────────
 
@@ -359,9 +460,12 @@ class BrainTab(ctk.CTkFrame):
         self._gen_btn.configure(state="disabled" if busy else "normal")
         if busy:
             self._animating = True
-            self._progress_val = 0.0
-            self._progress_bar.set(0)
-            self._tick_progress()
+            self._elapsed_secs = 0
+            self._current_phase = 1
+            self._progress_bar.configure(mode="determinate")
+            self._progress_bar.set(0.25)
+            self._status_lbl.configure(text="1/4 Anfrage wird vorbereitet")
+            self.after(1500, lambda: self._advance_phase(2))
 
     # ── Load existing project ─────────────────────────────────────────────────
 
@@ -406,7 +510,11 @@ class BrainTab(ctk.CTkFrame):
             messagebox.showerror("Fehler beim Laden", str(exc))
             return
         folder_name = project_dir.name
-        topic = re.sub(r"-\d{2}-\d{2}-\d{2}$", "", folder_name).replace("-", " ").strip()
+        _is_month = re.match(r'^\d{4}-\d{2}$', folder_name) or re.match(r"^\d{2}\.[A-Za-zäöüÄÖÜß]+'?\d{2}$", folder_name)
+        if _is_month:
+            topic = project_dir.parent.name
+        else:
+            topic = re.sub(r"-\d{2}-\d{2}-\d{2}$", "", folder_name).replace("-", " ").strip()
 
         df = self._reconstruct_status(df, project_dir)
 
@@ -421,7 +529,7 @@ class BrainTab(ctk.CTkFrame):
         fertig = int((df["Status"] == "Fertig").sum())
         self._progress_bar.set(fertig / len(df) if len(df) else 0)
         self._status_lbl.configure(
-            text=f"{len(df)} Shorts geladen — {fertig} Fertig  →  {project_dir.name}"
+            text=f"{len(df)} Shorts geladen — {fertig} Fertig  →  {topic}"
         )
 
     def _reconstruct_status(self, df: pd.DataFrame, project_dir: Path) -> pd.DataFrame:

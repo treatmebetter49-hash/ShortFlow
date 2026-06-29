@@ -6,9 +6,15 @@ _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = _CONFIG_DIR / "config.json"
 
 DEFAULTS = {
+    "provider": "openai",
     "openai_key": "",
+    "gemini_key": "",
     "fal_key": "",
     "output_dir": str(Path.home() / "Desktop"),
+    "netlify_token": "",
+    "netlify_site_id": "ed653129-3bd5-482e-b4e1-82287a1713d6",
+    "telegram_bot_token": "",
+    "telegram_chat_id": "",
     "first_run_music_setup_done": False,
     "music_mapping_enabled": False,
     "music_tracks": [

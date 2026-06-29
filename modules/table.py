@@ -144,6 +144,53 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         })
     rows_js = _json.dumps(row_objects, ensure_ascii=False)
 
+    import html as _html_lib
+
+    _musikLabel_py = {"phonk": "Phonk", "action": "Action", "wissen": "Wissen", "clever": "Clever"}
+
+    def _he(s: str) -> str:
+        return _html_lib.escape(str(s), quote=True)
+
+    def _copy_attr(s: str) -> str:
+        return _html_lib.escape(str(s), quote=True).replace('\n', '&#10;')
+
+    def _cell(text: str, css: str) -> str:
+        return (
+            f'<td><div class="{css}">{_he(text)}</div>'
+            f'<button class="copy-btn" data-copy="{_copy_attr(text)}">Kopieren</button></td>'
+        )
+
+    _tbody_rows = []
+    for _r in row_objects:
+        _tags = _auto_tags(_r['hook'], _r['titel'], topic)
+        _ig_block = _r['titel'] + '\n\n' + _r['ig'] + '\n\n' + ' '.join(_tags)
+        _musik_cell = (
+            f'<td class="td-musik">'
+            f'<span class="musik-badge musik-{_r["musik"]}">'
+            f'{_he(_musikLabel_py.get(_r["musik"], _r["musik"]))}</span>'
+            + (f'<span class="musik-track">{_he(_r["track"])}</span>' if _r['track'] else '')
+            + '</td>'
+        )
+        _tbody_rows.append(
+            '<tr>'
+            + f'<td class="td-num">{_he(_r["num"])}</td>'
+            + f'<td class="td-date">{_he(_r["date"])}</td>'
+            + f'<td class="td-tag">{_he(_r["tag"])}</td>'
+            + f'<td class="td-short">{_he(_r["short"])}</td>'
+            + _musik_cell
+            + _cell(_r['hook'], 'hook-text')
+            + _cell(_r['text'], 'text-body')
+            + _cell(_r['titel'], 'titel-text')
+            + _cell(_r['yt'], 'desc-text')
+            + f'<td><div class="desc-text">{_he(_r["ig"])}</div>'
+            + f'<button class="copy-btn" data-copy="{_copy_attr(_ig_block)}">Kopieren</button></td>'
+            + '<td class="td-status">'
+            + f'<button class="status-btn pending" data-short="{_he(_r["short"])}">Ausstehend</button>'
+            + '</td>'
+            + '</tr>'
+        )
+    _tbody_html = '\n'.join(_tbody_rows)
+
     _CSS = (
         "*{box-sizing:border-box;margin:0;padding:0}"
         ":root{"
@@ -170,7 +217,7 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         ".stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}"
         ".stat-val{font-size:28px;font-weight:900;color:var(--text)}"
         ".stat-val.green{color:var(--green)}"
-        ".sf-table-wrap{padding:0 1.5rem;overflow-x:auto}"
+        ".sf-table-wrap{padding:0 1.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch}"
         "table{width:100%;border-collapse:collapse;min-width:1100px;table-layout:fixed}"
         "col.c-num{width:46px}col.c-date{width:64px}col.c-tag{width:46px}"
         "col.c-short{width:108px}col.c-musik{width:100px}col.c-hook{width:158px}"
@@ -239,6 +286,13 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         "background:linear-gradient(90deg,#e74c3c,#9b59b6,#3498db);"
         "-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}"
         ".footer-brand-slogan{font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px}"
+        ".field-copied{opacity:.42;transition:opacity .3s}"
+        "@media(max-width:680px){"
+        ".sf-footer{grid-template-columns:1fr 1fr}"
+        ".copy-btn{padding:6px 10px;font-size:11px;min-height:34px}"
+        ".status-btn{padding:8px 12px;min-height:38px}"
+        ".sf-stats{gap:6px;padding:.8rem 1rem}"
+        "}"
     )
 
     _BODY = (
@@ -279,7 +333,7 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         f'<th class="th-ig">IG Beschreibung</th>'
         f'<th class="th-status center">&#10003; Status</th>'
         f'</tr></thead>'
-        f'<tbody id="table-body"></tbody>'
+        f'<tbody id="table-body">{_tbody_html}</tbody>'
         f'</table></div>'
         f'<div class="sf-footer">'
         f'<div class="footer-box">'
@@ -308,62 +362,61 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         f'</div>'
     )
 
+    _sf_pfx_js = _json.dumps("sf_" + topic_disp.replace(" ", "_") + "_" + today + "_")
     _SCRIPT = (
         f'const rows={rows_js};\n'
-        'const musikLabel={phonk:"Phonk",action:"Action",wissen:"Wissen",clever:"Clever"};\n'
-        'let doneSet=new Set();\n'
+        f'var _sfPfx={_sf_pfx_js};\n'
+        'function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}\n'
+        'function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}\n'
+        'function lsRemove(k){try{localStorage.removeItem(k);}catch(e){}}\n'
         'function updateCounts(){'
-        'document.getElementById("done-count").textContent=doneSet.size;'
-        'document.getElementById("pending-count").textContent=rows.length-doneSet.size;}\n'
-        'function mkCopyBtn(text){'
-        'const btn=document.createElement("button");btn.className="copy-btn";'
-        'btn.textContent="Kopieren";'
-        'btn.onclick=()=>{navigator.clipboard.writeText(text).then(()=>{'
-        'btn.classList.add("copied");btn.textContent="Kopiert!";'
-        'setTimeout(()=>{btn.classList.remove("copied");btn.textContent="Kopieren";},1200);'
-        '}).catch(()=>{const ta=document.createElement("textarea");ta.value=text;'
-        'document.body.appendChild(ta);ta.select();document.execCommand("copy");'
-        'document.body.removeChild(ta);btn.classList.add("copied");btn.textContent="Kopiert!";'
-        'setTimeout(()=>{btn.classList.remove("copied");btn.textContent="Kopieren";},1200);});};'
-        'return btn;}\n'
-        'function mkCell(text,css){'
-        'const td=document.createElement("td");'
-        'const p=document.createElement("div");p.className=css;p.textContent=text;'
-        'td.appendChild(p);td.appendChild(mkCopyBtn(text));return td;}\n'
-        'function buildTable(){'
-        'const tbody=document.getElementById("table-body");'
-        'rows.forEach((r,idx)=>{'
-        'const tr=document.createElement("tr");'
-        'const mkTd=(cls,txt)=>{const td=document.createElement("td");td.className=cls;td.textContent=txt;return td;};'
-        'const saved=localStorage.getItem("sf_"+r.short);'
-        'if(saved==="1"){tr.classList.add("done");doneSet.add(idx);}'
-        'tr.appendChild(mkTd("td-num",r.num));'
-        'tr.appendChild(mkTd("td-date",r.date));'
-        'tr.appendChild(mkTd("td-tag",r.tag));'
-        'tr.appendChild(mkTd("td-short",r.short));'
-        'const tdM=document.createElement("td");tdM.className="td-musik";'
-        'const badge=document.createElement("span");badge.className="musik-badge musik-"+r.musik;'
-        'badge.textContent=musikLabel[r.musik]||r.musik;tdM.appendChild(badge);'
-        'if(r.track){const tr2=document.createElement("span");tr2.className="musik-track";'
-        'tr2.textContent=r.track;tdM.appendChild(tr2);}tr.appendChild(tdM);'
-        'tr.appendChild(mkCell(r.hook,"hook-text"));'
-        'tr.appendChild(mkCell(r.text,"text-body"));'
-        'tr.appendChild(mkCell(r.titel,"titel-text"));'
-        'tr.appendChild(mkCell(r.yt,"desc-text"));'
-        'tr.appendChild(mkCell(r.ig,"desc-text"));'
-        'const tdSt=document.createElement("td");tdSt.className="td-status";'
-        'const btn=document.createElement("button");'
-        'const isDone=doneSet.has(idx);'
-        'btn.className="status-btn "+(isDone?"fertig":"pending");'
-        'btn.textContent=isDone?"✓ Fertig":"Ausstehend";'
-        'btn.onclick=()=>{'
-        'if(doneSet.has(idx)){doneSet.delete(idx);tr.classList.remove("done");'
+        'const done=document.querySelectorAll("#table-body tr.done").length;'
+        'const all=document.querySelectorAll("#table-body tr").length;'
+        'document.getElementById("done-count").textContent=done;'
+        'document.getElementById("pending-count").textContent=all-done;}\n'
+        'function fallbackCopy(text,btn){'
+        'var isIOS=/ipad|iphone/i.test(navigator.userAgent);'
+        'var ta=document.createElement("textarea");ta.value=text;'
+        'ta.style.position="fixed";ta.style.top="0";ta.style.left="0";'
+        'ta.style.width="100%";ta.style.height="1px";'
+        'ta.style.opacity="0.01";ta.style.fontSize="16px";'
+        'ta.style.padding="0";ta.style.border="none";'
+        'document.body.appendChild(ta);'
+        'if(isIOS){'
+        'var r=document.createRange();r.selectNodeContents(ta);'
+        'var s=window.getSelection();s.removeAllRanges();s.addRange(r);'
+        'ta.setSelectionRange(0,999999);'
+        '}else{ta.focus();ta.select();}'
+        'try{document.execCommand("copy");}catch(e){}'
+        'document.body.removeChild(ta);markCopied(btn);}\n'
+        'function markCopied(btn){'
+        'btn.classList.add("copied");btn.textContent="✓ Kopiert";'
+        'const field=btn.previousElementSibling;'
+        'if(field)field.classList.add("field-copied");}\n'
+        'function doCopy(btn){'
+        'var text=btn.getAttribute("data-copy");'
+        'if(location.protocol==="https:"&&navigator.clipboard&&navigator.clipboard.writeText){'
+        'navigator.clipboard.writeText(text).then(function(){markCopied(btn);}).catch(function(){fallbackCopy(text,btn);});'
+        '}else{fallbackCopy(text,btn);}}\n'
+        'function toggleStatus(btn){'
+        'const tr=btn.closest("tr");const short=btn.dataset.short;'
+        'if(tr.classList.contains("done")){'
+        'tr.classList.remove("done");'
         'btn.className="status-btn pending";btn.textContent="Ausstehend";'
-        'localStorage.removeItem("sf_"+r.short);}'
-        'else{doneSet.add(idx);tr.classList.add("done");'
+        'lsRemove(_sfPfx+short);'
+        '}else{'
+        'tr.classList.add("done");'
         'btn.className="status-btn fertig";btn.textContent="✓ Fertig";'
-        'localStorage.setItem("sf_"+r.short,"1");}updateCounts();};'
-        'tdSt.appendChild(btn);tr.appendChild(tdSt);tbody.appendChild(tr);});'
+        'lsSet(_sfPfx+short,"1");}updateCounts();}\n'
+        'function initTable(){'
+        'document.querySelectorAll(".copy-btn[data-copy]").forEach(function(btn){'
+        'btn.onclick=function(){doCopy(btn);};});'
+        'document.querySelectorAll(".status-btn[data-short]").forEach(function(btn){'
+        'const saved=lsGet(_sfPfx+btn.dataset.short);'
+        'if(saved==="1"){const tr=btn.closest("tr");'
+        'tr.classList.add("done");'
+        'btn.className="status-btn fertig";btn.textContent="✓ Fertig";}'
+        'btn.onclick=function(){toggleStatus(btn);};});'
         'updateCounts();}\n'
         'function exportXLS(){'
         'const cols=["#","Datum","Tag","Short","Musik","Hook","Textblock","Titel","YT Beschreibung","IG Beschreibung"];'
@@ -393,7 +446,7 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         'const b=new Blob([t],{type:"text/plain;charset=utf-8"});'
         'const a=document.createElement("a");a.href=URL.createObjectURL(b);'
         f'a.download="ShortFlow_Texte_{topic_disp.replace(" ","_")}.txt";a.click();}}\n'
-        'buildTable();'
+        'initTable();'
     )
 
     page = (
@@ -403,6 +456,147 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         f'<title>ShortFlow — {topic_disp}</title>'
         f'<style>{_CSS}</style>'
         f'</head><body>{_BODY}'
+        f'<script>{_SCRIPT}</script>'
+        '</body></html>'
+    )
+    Path(path).write_text(page, encoding="utf-8")
+
+
+def append_to_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config: dict | None = None) -> None:
+    """If path exists, merge existing rows with new df and rewrite. Otherwise create fresh."""
+    path = Path(path)
+    if not path.exists():
+        save_html(df, path, topic=topic, music_config=music_config)
+        return
+    try:
+        existing_df = load_html(path)
+    except Exception as exc:
+        print(f"[MERGE] Bestehende HTML nicht lesbar ({exc}) — überschreibe mit neuer Tabelle")
+        save_html(df, path, topic=topic, music_config=music_config)
+        return
+    merged = pd.concat([existing_df, df], ignore_index=True)
+    save_html(merged, path, topic=topic, music_config=music_config)
+    print(f"[MERGE] {len(existing_df)} bestehende + {len(df)} neue Rows → {len(merged)} gesamt")
+
+
+def save_ig_html(df: pd.DataFrame, path: str | Path, topic: str = "") -> None:
+    import html as _html_lib
+    from datetime import date as _date
+
+    topic_disp = topic.strip() or "ShortFlow"
+    today = _date.today().strftime("%d.%m.%Y")
+    count = len(df)
+
+    def _he(s: str) -> str:
+        return _html_lib.escape(str(s), quote=False)
+
+    cards_html = []
+    for i, (_, row) in enumerate(df.iterrows()):
+        short = str(row.get("Short", ""))
+        num = short.replace("Short", "")
+        date_val = str(row.get("Datum", ""))
+        titel = str(row.get("Titel", ""))
+        ig = str(row.get("IGBeschreibung", ""))
+        hook = str(row.get("Hook", ""))
+        tags = _auto_tags(hook, titel, topic)
+        ig_text = titel + '\n' + ig + '\n' + ' '.join(tags)
+        cards_html.append(
+            f'<div class="card">'
+            f'<div class="card-meta">'
+            f'<span class="num">Short {_html_lib.escape(num)}</span>'
+            f'<span class="cdate">{_html_lib.escape(date_val)}</span>'
+            f'</div>'
+            f'<div class="titel">{_html_lib.escape(titel)}</div>'
+            f'<button class="copy-btn" onclick="doCopy(this,{i})">Kopieren</button>'
+            f'<textarea class="ig-ta" id="ta{i}" readonly>{_html_lib.escape(ig_text)}</textarea>'
+            f'</div>'
+        )
+
+    cards = '\n'.join(cards_html)
+
+    _CSS = (
+        "*{box-sizing:border-box;margin:0;padding:0}"
+        "body{background:#0b0b10;color:#e2e2e2;"
+        "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
+        "padding:12px;max-width:620px;margin:0 auto}"
+        "header{padding:14px 0 12px;border-bottom:1px solid #252535;margin-bottom:14px}"
+        "h1{font-size:21px;font-weight:900;letter-spacing:-.01em;"
+        "background:linear-gradient(90deg,#e74c3c,#9b59b6,#3498db);"
+        "-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}"
+        ".hdr-meta{font-size:12px;color:#777;margin-top:5px}"
+        ".ios-hint{background:#1a1a10;border:1px solid #3a3a10;border-radius:8px;"
+        "padding:10px 12px;margin-bottom:14px;font-size:12px;color:#aaa;line-height:1.5}"
+        ".ios-hint strong{color:#f1c40f}"
+        ".card{background:#111118;border:1px solid #252535;border-radius:12px;padding:14px;margin-bottom:13px}"
+        ".card-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}"
+        ".num{background:#1a1a2e;color:#9b59b6;font-size:11px;font-weight:700;"
+        "padding:3px 9px;border-radius:5px;white-space:nowrap}"
+        ".cdate{color:#666;font-size:12px;white-space:nowrap}"
+        ".titel{font-size:14px;font-weight:600;color:#e2e2e2;margin-bottom:10px;line-height:1.4}"
+        ".copy-btn{display:block;width:100%;padding:14px;background:#16161f;"
+        "border:1px solid #252535;color:#888;font-size:15px;font-weight:600;"
+        "border-radius:8px;cursor:pointer;font-family:inherit;margin-bottom:10px;"
+        "transition:background .15s,border-color .15s,color .15s;"
+        "-webkit-tap-highlight-color:rgba(0,0,0,0)}"
+        ".copy-btn.sel{background:#1a1a0d;border-color:#f1c40f;color:#f1c40f}"
+        ".copy-btn.ok{background:#0d2a1a;border-color:#2ecc71;color:#2ecc71}"
+        ".ig-ta{display:block;width:100%;min-height:140px;background:#0d0d14;"
+        "border:1px solid #1e1e2e;color:#ccc;font-size:14px;line-height:1.7;"
+        "padding:12px;border-radius:8px;font-family:inherit;resize:vertical;"
+        "-webkit-user-select:text !important;user-select:text !important;cursor:text}"
+        ".card.done{opacity:.5;transition:opacity .3s}"
+        ".hint-error{display:none}"
+        ".ios-hint.blocked{background:#1a0d0d;border-color:#c0392b}"
+        ".ios-hint.blocked .hint-normal{display:none}"
+        ".ios-hint.blocked .hint-error{display:block}"
+    )
+
+    _SCRIPT = (
+        'function selAll(ta){'
+        'ta.focus();ta.select();'
+        'try{ta.setSelectionRange(0,ta.value.length);}catch(e){}}\n'
+        'function onOk(btn){'
+        'btn.classList.remove("sel","ok");btn.classList.add("ok");btn.textContent="✓ Kopiert";'
+        'var c=btn.closest(".card");if(c)c.classList.add("done");}\n'
+        'function showSafariHint(){'
+        'var h=document.getElementById("ios-hint");'
+        'if(h)h.classList.add("blocked");}\n'
+        'function onFail(btn,ta){'
+        'btn.classList.remove("sel","ok");btn.classList.add("sel");'
+        'btn.textContent="Manuell kopieren";'
+        'selAll(ta);showSafariHint();}\n'
+        'function tryExec(btn,ta){'
+        'var ok=false;try{ok=document.execCommand("copy");}catch(e){}'
+        'if(ok){onOk(btn);}else{onFail(btn,ta);}}\n'
+        'function doCopy(btn,idx){'
+        'var ta=document.getElementById("ta"+idx);'
+        'if(!ta)return;'
+        'var text=ta.value;'
+        'if(navigator.clipboard&&navigator.clipboard.writeText){'
+        'navigator.clipboard.writeText(text)'
+        '.then(function(){onOk(btn);})'
+        '.catch(function(){selAll(ta);tryExec(btn,ta);});'
+        '}else{selAll(ta);tryExec(btn,ta);}}\n'
+        'document.querySelectorAll(".ig-ta").forEach(function(ta){'
+        'ta.addEventListener("click",function(){selAll(ta);});});'
+    )
+
+    page = (
+        '<!DOCTYPE html><html lang="de"><head>'
+        '<meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f'<title>IG Export — {_html_lib.escape(topic_disp)}</title>'
+        f'<style>{_CSS}</style>'
+        '</head><body>'
+        '<header>'
+        '<h1>IG Export</h1>'
+        f'<div class="hdr-meta">{_html_lib.escape(topic_disp)} &nbsp;&middot;&nbsp; {_html_lib.escape(today)} &nbsp;&middot;&nbsp; {count} Shorts</div>'
+        '</header>'
+        '<div class="ios-hint" id="ios-hint">'
+        '<span class="hint-normal"><strong>Safari:</strong> F&uuml;r 1-Tap-Kopieren Datei in Safari &ouml;ffnen: Teilen &rarr; &bdquo;In Safari &ouml;ffnen&ldquo;</span>'
+        '<span class="hint-error"><strong>&#9888; Clipboard blockiert</strong> &mdash; du bist in der Dateien-Vorschau. Tippe Teilen &rarr; &bdquo;In Safari &ouml;ffnen&ldquo; und dann nochmal Kopieren.</span>'
+        '</div>'
+        f'{cards}'
         f'<script>{_SCRIPT}</script>'
         '</body></html>'
     )
@@ -630,3 +824,25 @@ def _add_status_conditional_format(ws, row_count: int) -> None:
             font=Font(color=_FG_FERTIG, bold=True),
         ),
     )
+
+
+def validate_html(path: str | Path) -> list[str]:
+    errors: list[str] = []
+    p = Path(path)
+    if not p.exists():
+        return ["Datei existiert nicht"]
+    if p.stat().st_size == 0:
+        errors.append("Datei ist leer (0 Bytes)")
+    try:
+        content = p.read_text(encoding="utf-8")
+    except Exception as exc:
+        return [f"Datei nicht lesbar: {exc}"]
+    if "<tbody" not in content:
+        errors.append("Kein <tbody> gefunden")
+    if "<tr" not in content:
+        errors.append("Keine <tr>-Zeilen gefunden")
+    if "Short" not in content:
+        errors.append("Keine Short-Daten gefunden")
+    if "fetch(" in content:
+        errors.append("Ungültig: enthält fetch()")
+    return errors

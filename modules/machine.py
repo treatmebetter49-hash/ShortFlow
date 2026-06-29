@@ -10,6 +10,11 @@ import pandas as pd
 
 MODEL = "fal-ai/flux-pro/v1.1"
 
+_MONTHS_DE = [
+    "Januar", "Februar", "März", "April", "Mai", "Juni",
+    "Juli", "August", "September", "Oktober", "November", "Dezember",
+]
+
 _BILLING_KEYWORDS = (
     "exhausted balance",
     "insufficient balance",
@@ -108,14 +113,20 @@ def generate_images(
     if project_dir is not None:
         project_dir = Path(project_dir)
         project_dir.mkdir(parents=True, exist_ok=True)
-        progress_cb(f"Projekt-Ordner: {project_dir.name}")
+        progress_cb(f"Projekt-Ordner: {project_dir.parent.name}/{project_dir.name}")
     else:
-        date_str = date.today().strftime("%d_%m_%y")
-        clean_topic = _sanitize_topic(topic)
-        project_name = f"{date_str}_{clean_topic}" if clean_topic else date_str
-        project_dir = output_dir / project_name
-        project_dir.mkdir(exist_ok=True)
-        progress_cb(f"Projekt-Ordner: {project_name}")
+        today = date.today()
+        safe_topic = re.sub(r'[<>:"/\\|?*]', '', topic).strip() or "Shorts"
+        month_name = f"{today.month:02d}.{_MONTHS_DE[today.month - 1]}'{today.year % 100:02d}"
+        existing = None
+        for d in output_dir.iterdir():
+            if d.is_dir() and d.name.startswith(safe_topic):
+                existing = d
+                break
+        topic_dir = existing if existing else output_dir / safe_topic
+        project_dir = topic_dir / month_name
+        project_dir.mkdir(parents=True, exist_ok=True)
+        progress_cb(f"Projekt-Ordner: {topic_dir.name}/{month_name}")
     progress_cb(f"[DBG] Projektordner (absolut): {project_dir}")
 
     df = df.copy()
