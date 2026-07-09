@@ -25,12 +25,20 @@ _TOPIC_TYPE_KEYWORDS: dict[str, list[str]] = {
         "berge", "wildlife", "fauna", "flora", "dschungel", "hai",
         "wolf", "bär", "adler", "schlange", "insekt",
     ],
+    "psychology": [
+        "psychologie", "psychologisch", "effekt", "gehirn", "verhalten",
+        "bias", "unterbewusst", "unterbewusstsein", "wahrnehmung",
+        "manipulation", "manipulieren", "denkfehler", "kognitiv",
+        "emotion", "trigger", "glaube", "überzeugung", "gewohnheit",
+        "gedächtnis", "angst", "sucht",
+    ],
 }
 
 _TOPIC_CATEGORY_MAP: dict[str, list[str]] = {
     "gaming": ["story", "fact", "opinion", "warning", "list"],
     "sport":  ["story", "fact", "list", "opinion", "warning"],
     "nature": ["fact", "mystery", "story", "warning"],
+    "psychology": ["psychology"],
     "general": ["story", "fact", "warning", "mystery", "opinion", "howto", "list"],
 }
 
