@@ -113,6 +113,20 @@
       {"text": "Diese 3 Fehler machen 99% aller Spieler.", "rhythm": "kurz", "energy": "hoch", "opening": "demonstrativ"},
       {"text": "5 Orte, die offiziell nicht existieren.", "rhythm": "kurz", "energy": "hoch", "opening": "zahl"},
       {"text": "Platz 1 überrascht jeden.", "rhythm": "sehr_kurz", "energy": "hoch", "opening": "nomen"}
+    ],
+    "psychology": [
+      {"text": "Dein Gehirn tut das jeden Tag, ohne dass du es merkst.", "rhythm": "kurz", "energy": "hoch", "opening": "possessivpronomen"},
+      {"text": "Dieser Bias steuert fast jede deiner Entscheidungen.", "rhythm": "kurz", "energy": "hoch", "opening": "demonstrativ"},
+      {"text": "Ein einziger Reiz reicht, um dein Verhalten zu ändern.", "rhythm": "kurz", "energy": "hoch", "opening": "artikel"},
+      {"text": "Niemand entkommt diesem Effekt, auch du nicht.", "rhythm": "kurz", "energy": "hoch", "opening": "negation"},
+      {"text": "Niemand merkt, wie sehr Gruppenzwang wirkt.", "rhythm": "sehr_kurz", "energy": "hoch", "opening": "negation"},
+      {"text": "Diese Reaktion läuft ab, bevor du überhaupt nachdenkst.", "rhythm": "kurz", "energy": "hoch", "opening": "demonstrativ"},
+      {"text": "Mach das nie, wenn du überzeugend wirken willst.", "rhythm": "kurz", "energy": "hoch", "opening": "verb"},
+      {"text": "Diese Masche nutzen Verkäufer seit Jahrzehnten gegen dich.", "rhythm": "kurz", "energy": "hoch", "opening": "demonstrativ"},
+      {"text": "Pass auf, dieser Trick funktioniert auch bei dir.", "rhythm": "sehr_kurz", "energy": "hoch", "opening": "verb"},
+      {"text": "Diese Technik wird komplett unterschätzt.", "rhythm": "sehr_kurz", "energy": "hoch", "opening": "demonstrativ"},
+      {"text": "Dein Bauchgefühl täuscht dich öfter, als du denkst.", "rhythm": "kurz", "energy": "hoch", "opening": "possessivpronomen"},
+      {"text": "Fast jeder überschätzt seine eigene Rationalität.", "rhythm": "kurz", "energy": "hoch", "opening": "adverb"}
     ]
   }
 }
