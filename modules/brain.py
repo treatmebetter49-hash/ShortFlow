@@ -1,6 +1,5 @@
 import json
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -11,7 +10,7 @@ from modules import hook_engine
 
 COLUMNS = ["Short", "Datum", "Tag", "Hook", "Text", "Titel", "YTBeschreibung", "IGBeschreibung", "Prompts", "Status", "EnergiTyp"]
 PROMPT_COUNT = 10
-_BATCH_SIZE = 5
+_BATCH_SIZE = 8
 _MAX_RETRIES = 3
 _HOOK_MAX = 70
 _LEN_MIN = 250    # Hook + Text Minimum
@@ -35,6 +34,16 @@ _SYSTEM = (
     "Beispiele: 'Ein Satz hat mein Denken über [THEMA] verändert.' · 'Ich dachte, ich mache alles richtig – bis das passiert ist.' · 'Keiner redet über die Schattenseite.'\n"
     "VERBOTEN für alle 5 Varianten: philosophische Aussagen, 'X der Y'-Konstrukte, abstrakte Begriffe ohne konkreten Bezug.\n"
     "Die 5 Varianten nutzen verschiedene Einstiegswörter — nie dasselbe Startwort zweimal.\n\n"
+
+    "TITEL (YouTube-Upload-Titel):\n"
+    "Der 'titel' ist der öffentliche YouTube-Videotitel, nicht der gesprochene Hook. Er MUSS trotzdem "
+    "eine Neugierlücke oder Konsequenz enthalten — reine Fachbegriff-Nennung killt die Klickrate.\n"
+    "VERBOTEN: 'Der/Die/Das [Fachbegriff]' allein als Titel (z.B. 'Der Halo-Effekt', 'Der Anker-Effekt', "
+    "'Kognitive Dissonanz'). Kein Wikipedia-Lexikon-Stil.\n"
+    "RICHTIG-Beispiel: 'Warum du hübsche Menschen automatisch für schlauer hältst' statt 'Der Halo-Effekt'. "
+    "'Der Trick, mit dem dein Gehirn dich täglich austrickst' statt 'Kognitive Dissonanz'.\n"
+    "Der Fachbegriff darf optional als Klammerzusatz vorkommen, der Titel-Kern selbst muss eine Frage, "
+    "Behauptung oder Konsequenz sein, die neugierig macht.\n\n"
 
     "Creator-Stil-Muster (nur als Rhythmus-Vorlage — nicht wörtlich kopieren):\n"
     "{pattern_examples}\n\n"
@@ -309,14 +318,22 @@ def _generate_concepts(topic: str, count: int, client: OpenAI, model: str) -> li
         return []
 
 
+_TITEL_STOP = {
+    "der", "die", "das", "ein", "eine", "des", "dem", "den", "von", "vor",
+    "und", "oder", "im", "in", "zu", "auf", "als", "aus", "sich", "dein",
+    # Generic psychology wrapper words that appear across many distinct concepts
+    "effekt", "macht", "wirkung", "gehirn", "prinzip", "leise",
+    "deines", "deine", "deinen", "deinem", "deiner",
+}
+
+
 def _find_duplicate_indices(df: pd.DataFrame) -> list[int]:
-    """Return indices of rows whose Titel shares a key word with an earlier row."""
-    _stop = {"der", "die", "das", "ein", "eine", "des", "dem", "den", "von", "vor", "und", "oder", "im", "in", "zu"}
+    """Return indices of rows whose Titel shares a meaningful key word with an earlier row."""
     seen_words: list[set[str]] = []
     dupes: list[int] = []
     for idx, row in df.iterrows():
         titel = str(row.get("Titel", "")).lower()
-        words = {w for w in re.split(r'\W+', titel) if len(w) > 4 and w not in _stop}
+        words = {w for w in re.split(r'\W+', titel) if len(w) > 4 and w not in _TITEL_STOP}
         is_dupe = any(words & prev for prev in seen_words)
         if is_dupe:
             dupes.append(idx)
@@ -334,6 +351,8 @@ _SYSTEM_DEDUP = (
     "\"titel\": \"...\", "
     "\"energie_typ\": \"wissen\"}}]}}\n\n"
     "Regeln: Hook max 70 Zeichen, direkte Aussage. "
+    "Titel MUSS Neugierlücke/Konsequenz enthalten, KEINE reine Fachbegriff-Nennung "
+    "(verboten: 'Der/Die/Das [Fachbegriff]' allein, z.B. 'Der Halo-Effekt'). "
     "Text ca. 190 Zeichen, du/dich/dein. "
     "Energie-Typ: phonk | action | wissen | clever."
 )
@@ -345,17 +364,19 @@ def _regenerate_single(
 ) -> pd.Series | None:
     used_t = "\n".join(f"- {t}" for t in used_titels[:40])
     used_h = "\n".join(f"- {h}" for h in used_hooks[:15])
+    dupe_titel = str(row.get("Titel", ""))
     user_msg = (
         f"Erstelle 1 Short zum Thema: {topic}\n\n"
+        f"VERBOTEN: Der Titel '{dupe_titel}' ist bereits vergeben. "
+        f"Wähle ein völlig anderes Konzept aus einem anderen Bereich der Psychologie.\n\n"
         f"Bereits verwendete Konzepte/Titel (NICHT wiederholen):\n{used_t}\n\n"
         f"Bereits verwendete Hooks (KEIN ähnliches Konzept):\n{used_h}"
     )
-    _stop = {"der", "die", "das", "ein", "eine", "des", "dem", "den", "von", "vor", "und", "oder", "im", "in", "zu"}
 
     def _titel_conflicts(titel: str) -> bool:
-        words = {w for w in re.split(r'\W+', titel.lower()) if len(w) > 4 and w not in _stop}
+        words = {w for w in re.split(r'\W+', titel.lower()) if len(w) > 4 and w not in _TITEL_STOP}
         for t in used_titels:
-            other = {w for w in re.split(r'\W+', t.lower()) if len(w) > 4 and w not in _stop}
+            other = {w for w in re.split(r'\W+', t.lower()) if len(w) > 4 and w not in _TITEL_STOP}
             if words & other:
                 return True
         return False
@@ -369,7 +390,7 @@ def _regenerate_single(
                     {"role": "system", "content": _SYSTEM_DEDUP.format(topic=topic)},
                     {"role": "user", "content": user_msg},
                 ],
-                temperature=0.9 + attempt * 0.05,
+                temperature=min(0.9 + attempt * 0.1, 1.3),
                 max_tokens=2048,
                 timeout=60,
             )
@@ -425,12 +446,13 @@ def _fetch_batch_with_retry(
     client: OpenAI, topic: str, count: int, pattern_str: str, batch_num: int = 1, model: str = "gpt-4o",
     used_hooks: list[str] | None = None,
     concepts: list[str] | None = None,
+    used_titels: list[str] | None = None,
 ) -> pd.DataFrame:
     last_exc: Exception | None = None
     for attempt in range(1, _MAX_RETRIES + 1):
         print(f"[BATCH {batch_num}] Versuch {attempt}/{_MAX_RETRIES}: {count} Shorts angefordert")
         try:
-            df = _fetch_batch(client, topic, count, pattern_str, model, used_hooks, concepts)
+            df = _fetch_batch(client, topic, count, pattern_str, model, used_hooks, concepts, used_titels)
             errors = _validate_df(df, count)
             if errors:
                 summary = "; ".join(errors[:3])
@@ -491,13 +513,13 @@ def generate_table(
     examples = hook_engine.get_pattern_examples(topic)
     pattern_str = "\n".join(f"• {h}" for h in examples)
 
-    def _fetch_with_fallback(batch_size: int, batch_num: int, used_hooks: list[str], concepts: list[str] | None = None) -> pd.DataFrame:
+    def _fetch_with_fallback(batch_size: int, batch_num: int, used_hooks: list[str], concepts: list[str] | None = None, used_titels: list[str] | None = None) -> pd.DataFrame:
         try:
-            return _fetch_batch_with_retry(client, topic, batch_size, pattern_str, batch_num, model, used_hooks, concepts)
+            return _fetch_batch_with_retry(client, topic, batch_size, pattern_str, batch_num, model, used_hooks, concepts, used_titels)
         except ValueError as exc:
             if "Rate Limit" in str(exc) and fallback_client:
                 print(f"[FALLBACK] Rate Limit auf {provider} → wechsle zu {fallback_provider} (Batch {batch_num})")
-                return _fetch_batch_with_retry(fallback_client, topic, batch_size, pattern_str, batch_num, fallback_model, used_hooks, concepts)
+                return _fetch_batch_with_retry(fallback_client, topic, batch_size, pattern_str, batch_num, fallback_model, used_hooks, concepts, used_titels)
             raise
 
     batch_sizes: list[int] = []
@@ -519,23 +541,21 @@ def generate_table(
         batch_concepts.append(all_concepts[offset:offset + size] if all_concepts else [])
         offset += size
 
-    # Phase 2: parallele Batches, jeder mit eigenem Konzept-Slice
-    frames: list[pd.DataFrame] = [pd.DataFrame()] * len(batch_sizes)
-    with ThreadPoolExecutor(max_workers=len(batch_sizes)) as executor:
-        future_to_idx = {
-            executor.submit(_fetch_with_fallback, size, i + 1, prior_hooks, batch_concepts[i]): i
-            for i, size in enumerate(batch_sizes)
-        }
-        for future in as_completed(future_to_idx):
-            idx = future_to_idx[future]
-            frames[idx] = future.result()
+    # Phase 2: sequenzielle Batches — jeder Batch kennt die Titel aller vorherigen
+    frames: list[pd.DataFrame] = []
+    accumulated_titels: list[str] = []
+    for i, size in enumerate(batch_sizes):
+        print(f"[BATCH {i+1}/{len(batch_sizes)}] Generiere {size} Shorts (kennt {len(accumulated_titels)} vorherige Titel)")
+        df_batch = _fetch_with_fallback(size, i + 1, prior_hooks, batch_concepts[i], accumulated_titels if accumulated_titels else None)
+        frames.append(df_batch)
+        accumulated_titels.extend(df_batch["Titel"].tolist())
 
     merged = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0].copy()
 
     if len(merged) < count:
         missing = count - len(merged)
         print(f"[REPAIR] {missing} Shorts fehlen — generiere fehlende Shorts nach")
-        repair_df = _fetch_with_fallback(missing, len(batch_sizes) + 1, prior_hooks)
+        repair_df = _fetch_with_fallback(missing, len(batch_sizes) + 1, prior_hooks, used_titels=accumulated_titels)
         merged = pd.concat([merged, repair_df], ignore_index=True)
         print(f"[REPAIR] Fertig — {len(merged)}/{count} Shorts total")
 
@@ -553,11 +573,14 @@ def generate_table(
     return merged
 
 
-def _fetch_batch(client: OpenAI, topic: str, count: int, pattern_str: str, model: str = "gpt-4o", used_hooks: list[str] | None = None, concepts: list[str] | None = None) -> pd.DataFrame:
+def _fetch_batch(client: OpenAI, topic: str, count: int, pattern_str: str, model: str = "gpt-4o", used_hooks: list[str] | None = None, concepts: list[str] | None = None, used_titels: list[str] | None = None) -> pd.DataFrame:
     user_msg = f"Erstelle {count} Shorts zum Thema: {topic}"
     if concepts:
         concepts_list = "\n".join(f"- {c}" for c in concepts)
         user_msg += f"\n\nVerpflichtend: Behandle genau diese {len(concepts)} Konzepte (je eines pro Short):\n{concepts_list}"
+    if used_titels:
+        titels_list = "\n".join(f"- {t}" for t in used_titels)
+        user_msg += f"\n\nBereits verwendete Titel/Konzepte (NICHT wiederholen, kein ähnliches Thema):\n{titels_list}"
     if used_hooks:
         used_list = "\n".join(f"- {h}" for h in used_hooks)
         user_msg += f"\n\nBereits verwendete Hooks aus früheren Generierungen (NICHT wiederholen):\n{used_list}"
