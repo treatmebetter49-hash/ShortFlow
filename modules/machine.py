@@ -145,54 +145,53 @@ def generate_images(
         raw_prompts = str(row.get("Prompts", ""))
         prompts = [p.strip() for p in raw_prompts.split("||") if p.strip()]
 
+        err_count = 0
         if not prompts:
             progress_cb(f"\n[{short_name}] Starte...")
-            progress_cb(f"  [WARN] Keine Prompts gefunden — übersprungen")
-            continue
-
-        prompts_txt = folder / "prompts.txt"
-        if not prompts_txt.exists():
-            prompts_txt.write_text(
-                "\n".join(f"{i}. {p}" for i, p in enumerate(prompts[:10], 1)),
-                encoding="utf-8",
-            )
-
-        is_real = not USE_MOCK_IMAGE_API
-        prompt_list = prompts[:10]
-        already_done = sum(
-            1 for i in range(1, len(prompt_list) + 1)
-            if _is_valid_png(folder / f"Bild{i:02d}.png")
-            and (not is_real or (folder / f"Bild{i:02d}.png").stat().st_size > _MIN_REAL_IMAGE_BYTES)
-        )
-        remaining = len(prompt_list) - already_done
-        run_type = "RESUME" if already_done > 0 else "FRESH"
-        if already_done > 0:
-            progress_cb(f"\n[{short_name}] Fortsetzen — {already_done} vorhanden, {remaining} ausstehend")
+            progress_cb(f"  [WARN] Keine Prompts gefunden — Bilder übersprungen")
         else:
-            progress_cb(f"\n[{short_name}] Starte — {remaining} Bilder")
-        progress_cb(f"  [DBG] {run_type} is_real={is_real} prompts={len(prompt_list)}")
+            prompts_txt = folder / "prompts.txt"
+            if not prompts_txt.exists():
+                prompts_txt.write_text(
+                    "\n".join(f"{i}. {p}" for i, p in enumerate(prompts[:10], 1)),
+                    encoding="utf-8",
+                )
 
-        err_count = 0
-        for i, prompt in enumerate(prompt_list, start=1):
-            bild_path = folder / f"Bild{i:02d}.png"
-            png_ok = _is_valid_png(bild_path)
-            size = bild_path.stat().st_size if bild_path.exists() else 0
-            size_ok = not is_real or size > _MIN_REAL_IMAGE_BYTES
-            if png_ok and size_ok:
-                progress_cb(f"  [SKIP] Bild{i:02d}.png (size={size})")
-                continue
-            progress_cb(f"  [DBG] Bild{i:02d} png_ok={png_ok} size={size} size_ok={size_ok}")
+            is_real = not USE_MOCK_IMAGE_API
+            prompt_list = prompts[:10]
+            already_done = sum(
+                1 for i in range(1, len(prompt_list) + 1)
+                if _is_valid_png(folder / f"Bild{i:02d}.png")
+                and (not is_real or (folder / f"Bild{i:02d}.png").stat().st_size > _MIN_REAL_IMAGE_BYTES)
+            )
+            remaining = len(prompt_list) - already_done
+            run_type = "RESUME" if already_done > 0 else "FRESH"
+            if already_done > 0:
+                progress_cb(f"\n[{short_name}] Fortsetzen — {already_done} vorhanden, {remaining} ausstehend")
+            else:
+                progress_cb(f"\n[{short_name}] Starte — {remaining} Bilder")
+            progress_cb(f"  [DBG] {run_type} is_real={is_real} prompts={len(prompt_list)}")
 
-            progress_cb(f"  [GEN]  Bild{i:02d}.png...")
-            try:
-                _generate_and_save(prompt, bild_path, fal_client_instance, log_cb=progress_cb)
-                progress_cb(f"  [OK]   Bild{i:02d}.png")
-            except BillingError as exc:
-                progress_cb(f"  [BILLING] {exc.__cause__ or exc}")
-                raise
-            except Exception as exc:
-                err_count += 1
-                progress_cb(f"  [ERR]  Bild{i:02d}.png — {exc}")
+            for i, prompt in enumerate(prompt_list, start=1):
+                bild_path = folder / f"Bild{i:02d}.png"
+                png_ok = _is_valid_png(bild_path)
+                size = bild_path.stat().st_size if bild_path.exists() else 0
+                size_ok = not is_real or size > _MIN_REAL_IMAGE_BYTES
+                if png_ok and size_ok:
+                    progress_cb(f"  [SKIP] Bild{i:02d}.png (size={size})")
+                    continue
+                progress_cb(f"  [DBG] Bild{i:02d} png_ok={png_ok} size={size} size_ok={size_ok}")
+
+                progress_cb(f"  [GEN]  Bild{i:02d}.png...")
+                try:
+                    _generate_and_save(prompt, bild_path, fal_client_instance, log_cb=progress_cb)
+                    progress_cb(f"  [OK]   Bild{i:02d}.png")
+                except BillingError as exc:
+                    progress_cb(f"  [BILLING] {exc.__cause__ or exc}")
+                    raise
+                except Exception as exc:
+                    err_count += 1
+                    progress_cb(f"  [ERR]  Bild{i:02d}.png — {exc}")
 
         if err_count:
             progress_cb(f"[{short_name}] ✓ Fertig ({err_count} Fehler)")
