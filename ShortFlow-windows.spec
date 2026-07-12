@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('hook_patterns.json', '.'), ('shortflow_theme.json', '.')]
 binaries = []
 hiddenimports = [
     'fal_client', 'fal_client.client',
@@ -38,7 +38,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=True,  # DEBUG: temporär sichtbar, um Absturzursache zu finden
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
