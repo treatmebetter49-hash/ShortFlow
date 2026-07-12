@@ -9,7 +9,32 @@
       "Bash(bash build.sh)",
       "Bash(pyinstaller ShortFlow.spec -y)",
       "Bash(python3 /Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/generate_report.py)",
-      "Bash(open /Users/mathiaskunze/Downloads/ShortFlow_Marktbericht_Mai2026.pdf)"
+      "Bash(open /Users/mathiaskunze/Downloads/ShortFlow_Marktbericht_Mai2026.pdf)",
+      "Bash(osascript -e ' *)",
+      "Bash(osascript)",
+      "Bash(bash /Users/mathiaskunze/Downloads/ClaudeCoe/ShortFlow/build.sh)",
+      "Bash(rm -rf /Applications/ShortFlow.app)",
+      "Bash(cp -r dist/ShortFlow.app /Applications/ShortFlow.app)",
+      "Bash(python3 -c \"import modules.table; print\\('OK'\\)\")",
+      "Bash(python3 -c \"import ui.brain_tab; print\\('OK'\\)\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(shortcuts list *)",
+      "Bash(shortcuts help *)",
+      "Bash(shortcuts sign *)",
+      "Bash(gh repo *)",
+      "Skill(code-review)",
+      "Skill(code-review:*)",
+      "Bash(npx skills *)",
+      "Bash(mkdir -p ~/.claude/skills/build-page)",
+      "Edit(~/.claude/skills/build-page/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/mathiaskunze/.claude",
+      "/Users/mathiaskunze/.claude/skills"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "n8n-mcp"
+  ]
 }

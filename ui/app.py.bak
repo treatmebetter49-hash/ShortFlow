@@ -1,0 +1,141 @@
+import sys
+import tkinter as tk
+from pathlib import Path
+
+import customtkinter as ctk
+import pandas as pd
+
+from modules import config_manager, scanner
+from ui.settings_tab import SettingsTab
+from ui.brain_tab import BrainTab
+from ui.machine_tab import MachineTab
+from ui.onboarding_music import OnboardingMusic
+
+_TAB_BRAIN = "🧠  Brain"
+_TAB_MACHINE = "⚙️  Machine"
+_TAB_SETTINGS = "🔧  Settings"
+
+
+class App(ctk.CTk):
+    def __init__(self):
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
+        # Lila Akzent direkt überschreiben
+        from customtkinter.windows.widgets.theme import ThemeManager
+        _P = "#9b30ff"
+        _PH = "#7a20dd"
+        _PD = "#5a10bd"
+        _GLASS    = "#2a1250"
+        _GLASS_H  = "#3d1c6e"
+        _BORDER   = "#9b30ff"
+        _TXT      = "#e8d8ff"
+        ThemeManager.theme["CTkButton"]["fg_color"]       = [_GLASS, _GLASS]
+        ThemeManager.theme["CTkButton"]["hover_color"]    = [_GLASS_H, _GLASS_H]
+        ThemeManager.theme["CTkButton"]["border_color"]   = [_BORDER, _BORDER]
+        ThemeManager.theme["CTkButton"]["border_width"]   = 1
+        ThemeManager.theme["CTkButton"]["corner_radius"]  = 10
+        ThemeManager.theme["CTkButton"]["text_color"]     = [_TXT, _TXT]
+        for key in ("CTkCheckBox", "CTkRadioButton"):
+            ThemeManager.theme[key]["fg_color"] = [_P, _P]
+            ThemeManager.theme[key]["hover_color"] = [_PH, _PH]
+        ThemeManager.theme["CTkSwitch"]["progress_color"] = [_P, _P]
+        ThemeManager.theme["CTkOptionMenu"]["fg_color"]              = [_GLASS, _GLASS]
+        ThemeManager.theme["CTkOptionMenu"]["button_color"]          = [_GLASS_H, _GLASS_H]
+        ThemeManager.theme["CTkOptionMenu"]["button_hover_color"]    = [_GLASS_H, _GLASS_H]
+        ThemeManager.theme["CTkOptionMenu"]["text_color"]            = [_TXT, _TXT]
+        ThemeManager.theme["CTkSegmentedButton"]["selected_color"]       = [_GLASS_H, _GLASS_H]
+        ThemeManager.theme["CTkSegmentedButton"]["selected_hover_color"] = [_GLASS_H, _GLASS_H]
+        super().__init__()
+        self.withdraw()
+        self.title("ShortFlow")
+        self.minsize(900, 600)
+        w, h = 1100, 720
+        self.update_idletasks()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.geometry(f"{w}x{h}+{x}+{y}")
+        self._build()
+        self.deiconify()
+        self.scan_result = scanner.ScanResult()
+        self.after(50, self._run_startup_scan)
+        cfg = config_manager.load()
+        if not cfg.get("first_run_music_setup_done", False):
+            self.after(400, lambda: OnboardingMusic(self))
+
+    def _build(self):
+        # ── Gradient Header ───────────────────────────────────────────────────
+        _BG = "#111118"
+        self._header = ctk.CTkFrame(self, fg_color=_BG, corner_radius=0, height=52)
+        self._header.pack(fill="x")
+        self._header.pack_propagate(False)
+
+        inner = ctk.CTkFrame(self._header, fg_color=_BG, corner_radius=0)
+        inner.pack(side="left", padx=20, pady=10)
+
+        _PINK   = (233, 30, 140)
+        _PURPLE = (155, 48, 255)
+        text = "ShortFlow"
+        for i, ch in enumerate(text):
+            t = i / max(len(text) - 1, 1)
+            r = int(_PINK[0] + (_PURPLE[0] - _PINK[0]) * t)
+            g = int(_PINK[1] + (_PURPLE[1] - _PINK[1]) * t)
+            b = int(_PINK[2] + (_PURPLE[2] - _PINK[2]) * t)
+            col = f"#{r:02x}{g:02x}{b:02x}"
+            lbl = ctk.CTkLabel(inner, text=ch,
+                               font=ctk.CTkFont(family="Helvetica", size=26, weight="bold"),
+                               text_color=col, fg_color=_BG)
+            lbl.pack(side="left")
+
+        ctk.CTkFrame(self._header, fg_color="#2a2a3a", corner_radius=0, height=1).pack(
+            side="bottom", fill="x"
+        )
+
+        self._tabs = ctk.CTkTabview(self)
+        self._tabs.pack(fill="both", expand=True, padx=12, pady=(4, 4))
+
+        for name in (_TAB_BRAIN, _TAB_MACHINE, _TAB_SETTINGS):
+            self._tabs.add(name)
+
+        self._settings = SettingsTab(self._tabs.tab(_TAB_SETTINGS))
+        self._settings.pack(fill="both", expand=True)
+
+        self._brain = BrainTab(
+            self._tabs.tab(_TAB_BRAIN),
+            get_config=self._settings.get_config,
+            on_go_to_machine=self._go_to_machine,
+            get_scan_result=lambda: self.scan_result,
+        )
+        self._brain.pack(fill="both", expand=True)
+
+        self._machine = MachineTab(
+            self._tabs.tab(_TAB_MACHINE),
+            get_config=self._settings.get_config,
+        )
+        self._machine.pack(fill="both", expand=True)
+
+        self._tabs.set(_TAB_BRAIN)
+
+        self._status_bar = ctk.CTkLabel(
+            self,
+            text="Ordner werden gescannt...",
+            anchor="w",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray40", "gray60"),
+        )
+        self._status_bar.pack(fill="x", padx=14, pady=(0, 6))
+
+    def _run_startup_scan(self):
+        try:
+            cfg = config_manager.load()
+            output_dir = cfg.get("output_dir", "").strip()
+            if output_dir:
+                self.scan_result = scanner.scan_shorts_base(Path(output_dir))
+            self._status_bar.configure(text=self.scan_result.status_text)
+        except Exception:
+            self._status_bar.configure(text="Scan fehlgeschlagen")
+
+    def _go_to_machine(self, df: pd.DataFrame, topic: str = "", project_dir=None):
+        self._machine.load_from_brain(df, topic, project_dir)
+        self._tabs.set(_TAB_MACHINE)
