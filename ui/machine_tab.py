@@ -8,6 +8,8 @@ import customtkinter as ctk
 import pandas as pd
 
 from modules import machine, table
+from ui.gradient_bar import GradientProgressBar
+from ui.theme import GLASS as _GLASS
 
 
 class MachineTab(ctk.CTkFrame):
@@ -24,7 +26,7 @@ class MachineTab(ctk.CTkFrame):
         # ── Source row ────────────────────────────────────────────────────────
         src = ctk.CTkFrame(self, fg_color="transparent")
         src.pack(fill="x", padx=20, pady=(20, 0))
-        ctk.CTkButton(src, text="CSV laden", width=100, command=self._load_csv).pack(side="left")
+        ctk.CTkButton(src, text="CSV laden", width=100, command=self._load_csv, **_GLASS).pack(side="left")
         self._src_lbl = ctk.CTkLabel(src, text="Keine Tabelle geladen")
         self._src_lbl.pack(side="left", padx=(12, 0))
 
@@ -35,7 +37,7 @@ class MachineTab(ctk.CTkFrame):
         ctk.CTkLabel(path_row, text="Output:").grid(row=0, column=0, sticky="w")
         self._dir_var = tk.StringVar(value=self._get_config().get("output_dir", ""))
         ctk.CTkEntry(path_row, textvariable=self._dir_var).grid(row=0, column=1, sticky="ew", padx=(8, 8))
-        ctk.CTkButton(path_row, text="Ändern", width=90, command=self._browse).grid(row=0, column=2)
+        ctk.CTkButton(path_row, text="Ändern", width=90, command=self._browse, **_GLASS).grid(row=0, column=2)
 
         # ── Buttons ───────────────────────────────────────────────────────────
         btn_row = ctk.CTkFrame(self, fg_color="transparent")
@@ -45,6 +47,7 @@ class MachineTab(ctk.CTkFrame):
             btn_row, text="MEDIEN-PAKET SCHNÜREN",
             height=44, font=ctk.CTkFont(size=15, weight="bold"),
             command=self._start,
+            **_GLASS,
         )
         self._gen_btn.pack(side="left", padx=(0, 10))
 
@@ -53,6 +56,7 @@ class MachineTab(ctk.CTkFrame):
             height=44, font=ctk.CTkFont(size=15, weight="bold"),
             state="disabled",
             command=self._resume,
+            **_GLASS,
         )
         self._resume_btn.pack(side="left")
 
@@ -63,8 +67,7 @@ class MachineTab(ctk.CTkFrame):
             w.bind("<MouseWheel>", lambda e: self._log._textbox.yview_scroll(int(-e.delta), "units"))
 
         # ── Progress bar ──────────────────────────────────────────────────────
-        self._progress = ctk.CTkProgressBar(self)
-        self._progress.set(0)
+        self._progress = GradientProgressBar(self, height=6)
         self._progress.pack(fill="x", padx=20, pady=(0, 16))
 
     # ── Public: called by app when "Weiter zu Machine" is clicked ─────────────
@@ -131,7 +134,7 @@ class MachineTab(ctk.CTkFrame):
 
         threading.Thread(
             target=self._run,
-            args=(self._df.copy(), output_dir, cfg["fal_key"], cb, self._topic, self._project_dir),
+            args=(self._df.copy(), output_dir, cfg["fal_key"], cb, self._topic, self._project_dir, cfg.get("elevenlabs_key", "")),
             daemon=True,
         ).start()
 
@@ -141,9 +144,9 @@ class MachineTab(ctk.CTkFrame):
         self._log_write("\n--- Fortsetze Generierung ---\n")
         self._start()
 
-    def _run(self, df: pd.DataFrame, output_dir: str, fal_key: str, cb: Callable, topic: str = "", project_dir=None):
+    def _run(self, df: pd.DataFrame, output_dir: str, fal_key: str, cb: Callable, topic: str = "", project_dir=None, elevenlabs_key: str = ""):
         try:
-            updated = machine.generate_images(df, output_dir, fal_key, cb, topic, project_dir=project_dir)
+            updated = machine.generate_images(df, output_dir, fal_key, cb, topic, project_dir=project_dir, elevenlabs_key=elevenlabs_key)
             self._df = updated
         except machine.BillingError as exc:
             self.after(0, self._on_billing_error, str(exc))

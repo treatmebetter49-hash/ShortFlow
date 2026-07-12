@@ -10,7 +10,7 @@ echo "PyInstaller: $(pyinstaller --version)"
 echo ""
 
 # Altes Build-Verzeichnis aufräumen
-rm -rf dist/ShortFlow.app build/ ShortFlow.spec
+rm -rf dist/ build/ ShortFlow.spec
 
 echo "--- Starte Build ---"
 pyinstaller \
@@ -32,6 +32,7 @@ pyinstaller \
   --hidden-import httpx \
   --hidden-import anyio \
   --hidden-import anyio._backends._asyncio \
+  --add-data "shortflow_theme.json:." \
   --osx-bundle-identifier "com.shortflow.app" \
   main.py
 

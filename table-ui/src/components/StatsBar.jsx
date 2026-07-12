@@ -23,7 +23,7 @@ export default function StatsBar() {
       <span className="w-px bg-white/[0.08]" />
       <Stat label="Prompts" value="90" />
       <span className="w-px bg-white/[0.08]" />
-      <Stat label="Fertig"  value="14" accent="#26D7F4" glow="rgba(38,215,244,0.6)" />
+      <Stat label="Fertig"  value="14" accent="#3ECF6E" glow="rgba(62,207,110,0.55)" />
     </div>
   );
 }

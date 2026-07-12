@@ -10,6 +10,7 @@ DEFAULTS = {
     "openai_key": "",
     "gemini_key": "",
     "fal_key": "",
+    "elevenlabs_key": "",
     "output_dir": str(Path.home() / "Desktop"),
     "netlify_token": "",
     "netlify_site_id": "ed653129-3bd5-482e-b4e1-82287a1713d6",
