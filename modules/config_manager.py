@@ -1,7 +1,12 @@
 import json
+import os
+import sys
 from pathlib import Path
 
-_CONFIG_DIR = Path.home() / "Library" / "Application Support" / "ShortFlow"
+if sys.platform == "win32":
+    _CONFIG_DIR = Path(os.environ.get("APPDATA", Path.home())) / "ShortFlow"
+else:
+    _CONFIG_DIR = Path.home() / "Library" / "Application Support" / "ShortFlow"
 _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = _CONFIG_DIR / "config.json"
 
