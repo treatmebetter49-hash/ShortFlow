@@ -25,10 +25,20 @@ def _log_uncaught(exc_type, exc_value, exc_tb):
 
 sys.excepthook = _log_uncaught
 
-from ui.app import App
+try:
+    from ui.app import App
+except Exception:
+    with open(_LOG_PATH, "a", encoding="utf-8") as f:
+        traceback.print_exc(file=f)
+    raise
 
 
 if __name__ == "__main__":
-    app = App()
-    app.report_callback_exception = lambda *exc_info: _log_uncaught(*exc_info)
-    app.mainloop()
+    try:
+        app = App()
+        app.report_callback_exception = lambda *exc_info: _log_uncaught(*exc_info)
+        app.mainloop()
+    except Exception:
+        with open(_LOG_PATH, "a", encoding="utf-8") as f:
+            traceback.print_exc(file=f)
+        raise
