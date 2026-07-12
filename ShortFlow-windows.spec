@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('hook_patterns.json', '.'), ('shortflow_theme.json', '.')]
+datas = [('hook_patterns.json', '.')]
 binaries = []
 hiddenimports = [
     'fal_client', 'fal_client.client',
