@@ -6,14 +6,14 @@ cd "$PROJECT_DIR"
 
 echo "=== ShortFlow macOS Build ==="
 echo "Python: $(python3 --version)"
-echo "PyInstaller: $(pyinstaller --version)"
+echo "PyInstaller: $(python3 -m PyInstaller --version)"
 echo ""
 
 # Altes Build-Verzeichnis aufräumen
 rm -rf dist/ build/ ShortFlow.spec
 
 echo "--- Starte Build ---"
-pyinstaller \
+python3 -m PyInstaller \
   --windowed \
   --name "ShortFlow" \
   --icon "icon.icns" \
@@ -41,8 +41,23 @@ echo "--- Ad-hoc Signatur ---"
 codesign --force --deep --sign - "$PROJECT_DIR/dist/ShortFlow.app"
 
 echo ""
+echo "--- DMG bauen ---"
+DMG_PATH="$PROJECT_DIR/dist/ShortFlow.dmg"
+DMG_STAGING="$PROJECT_DIR/dist/dmg-staging"
+rm -f "$DMG_PATH"
+rm -rf "$DMG_STAGING"
+# Staging-Ordner mit App + Programme-Alias, damit der Nutzer die App per
+# Drag & Drop in den Programme-Ordner ziehen kann (statt aus der DMG zu starten).
+mkdir -p "$DMG_STAGING"
+cp -R "$PROJECT_DIR/dist/ShortFlow.app" "$DMG_STAGING/"
+ln -s /Applications "$DMG_STAGING/Applications"
+hdiutil create -volname "ShortFlow" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG_PATH"
+rm -rf "$DMG_STAGING"
+
+echo ""
 echo "=== Build fertig ==="
 echo "App: $PROJECT_DIR/dist/ShortFlow.app"
+echo "DMG: $DMG_PATH"
 echo ""
 echo "Testen:"
 echo "  open dist/ShortFlow.app"
