@@ -74,9 +74,9 @@ export const ROWS = [
 ];
 
 export const STATUS_META = {
-  ready:     { label: "Fertig",    color: "#3CDB8C", glow: "rgba(60,219,140,0.5)" },
-  scheduled: { label: "Geplant",   color: "#A78BFA", glow: "rgba(167,139,250,0.5)" },
-  review:    { label: "Review",    color: "#F5C25B", glow: "rgba(245,194,91,0.5)" },
-  drafting:  { label: "In Arbeit", color: "#FF3D8A", glow: "rgba(255,61,138,0.5)" },
+  ready:     { label: "Fertig",    color: "#3ECF6E", glow: "rgba(62,207,110,0.5)" },
+  scheduled: { label: "Geplant",   color: "#8FA6C7", glow: "rgba(143,166,199,0.45)" },
+  review:    { label: "Review",    color: "#D98F3B", glow: "rgba(217,143,59,0.45)" },
+  drafting:  { label: "In Arbeit", color: "#6FA8DC", glow: "rgba(111,168,220,0.45)" },
   idea:      { label: "Idee",      color: "rgba(255,255,255,0.5)", glow: "rgba(255,255,255,0.25)" },
 };

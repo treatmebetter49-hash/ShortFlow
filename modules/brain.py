@@ -417,6 +417,127 @@ def _regenerate_single(
     return None
 
 
+_SYSTEM_HOOK_ONLY = (
+    "Du bist ein TikTok/Reels-Voiceover-Autor. Für einen BESTEHENDEN Short zum Thema '{topic}' "
+    "brauchst du NUR neue Hook-Varianten — Text, Titel und Bilder bleiben unverändert und werden "
+    "dir nur als Kontext gegeben, damit der Hook thematisch passt.\n\n"
+    "Erstelle genau 5 Hook-Varianten im Feld 'hook_variants' (Array mit 5 Strings). "
+    "Maximal 70 Zeichen pro Hook. Keine Fragen. Keine 'Was wäre wenn'-Formulierungen. "
+    "Kein 'Stell dir vor'-Stil. Direkte Aussage, harte Neugier, sofortige Spannung.\n"
+    "HOOK-FORMEL (Pflicht): Die 5 Varianten müssen diese Typen abdecken:\n"
+    "- Mindestens 2x WIDERSPRUCHS-HOOK: Aussage die der Leser sofort anzweifelt.\n"
+    "- Mindestens 1x OPINION-HOOK: Kontroverse oder unbequeme Wahrheit.\n"
+    "- Mindestens 1x STORY-HOOK: Persönlich, emotional, authentisch.\n"
+    "VERBOTEN für alle 5 Varianten: philosophische Aussagen, 'X der Y'-Konstrukte, abstrakte Begriffe ohne konkreten Bezug.\n"
+    "Die 5 Varianten nutzen verschiedene Einstiegswörter — nie dasselbe Startwort zweimal.\n\n"
+    "Creator-Stil-Muster (nur als Rhythmus-Vorlage — nicht wörtlich kopieren):\n"
+    "{pattern_examples}\n\n"
+    "Antworte NUR mit validem JSON ohne Markdown-Blöcke. Format exakt: "
+    '{{"hook_variants": ["...", "...", "...", "...", "..."]}}'
+)
+
+
+def _fetch_hook_variants(
+    client: OpenAI, topic: str, titel: str, text: str, pattern_str: str, model: str,
+    used_hooks: list[str],
+) -> list[str]:
+    used_block = ""
+    if used_hooks:
+        used_list = "\n".join(f"- {h}" for h in used_hooks[:30])
+        used_block = f"\n\nBereits verwendete Hooks in dieser Tabelle (NICHT wiederholen, kein ähnliches Konzept):\n{used_list}"
+    user_msg = (
+        f"Bestehender Short — Titel: '{titel}'\n"
+        f"Bestehender Voiceover-Text (Kontext, NICHT ändern): '{text}'\n\n"
+        f"Erstelle 5 neue Hook-Varianten, die zu diesem Text passen.{used_block}"
+    )
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": _SYSTEM_HOOK_ONLY.format(topic=topic, pattern_examples=pattern_str)},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.9,
+            max_tokens=1024,
+            timeout=60,
+        )
+    except AuthenticationError:
+        raise ValueError("API Key ist ungültig. Bitte in den Einstellungen prüfen.") from None
+    except RateLimitError:
+        raise ValueError("Rate Limit erreicht. Bitte kurz warten und erneut versuchen.") from None
+
+    raw = response.choices[0].message.content
+    data = json.loads(raw)
+    variants = data.get("hook_variants", [])
+    return [str(v) for v in variants if v]
+
+
+def regenerate_hooks_only(
+    df: pd.DataFrame,
+    topic: str,
+    openai_key: str,
+    provider: str = "openai",
+    fallback_key: str = "",
+    fallback_provider: str = "",
+) -> pd.DataFrame:
+    """Ersetzt NUR die 'Hook'-Spalte einer bestehenden Tabelle. Text, Titel,
+    Prompts und Status bleiben unangetastet — Bilder-Ordner werden nicht berührt."""
+    provider = provider if provider in _PROVIDER_CONFIG else "openai"
+    pconf = _PROVIDER_CONFIG[provider]
+    if not openai_key:
+        label = provider.capitalize()
+        raise ValueError(f"{label} API Key fehlt. Bitte in den Einstellungen eintragen.")
+    if not topic.strip():
+        raise ValueError("Bitte ein Thema eingeben.")
+
+    client = OpenAI(api_key=openai_key, base_url=pconf["base_url"])
+    model = pconf["model"]
+
+    fallback_client: OpenAI | None = None
+    fallback_model = ""
+    if fallback_key and fallback_provider and fallback_provider in _PROVIDER_CONFIG:
+        fb_conf = _PROVIDER_CONFIG[fallback_provider]
+        fallback_client = OpenAI(api_key=fallback_key, base_url=fb_conf["base_url"])
+        fallback_model = fb_conf["model"]
+
+    examples = hook_engine.get_pattern_examples(topic)
+    pattern_str = "\n".join(f"• {h}" for h in examples)
+
+    df = df.copy()
+    hooks_by_idx: dict = {i: str(h) for i, h in zip(df.index, df["Hook"].tolist()) if h}
+
+    for idx in df.index:
+        short_id = str(df.at[idx, "Short"])
+        titel = str(df.at[idx, "Titel"])
+        text = str(df.at[idx, "Text"])
+        other_hooks = [h for j, h in hooks_by_idx.items() if j != idx]
+        try:
+            variants = _fetch_hook_variants(client, topic, titel, text, pattern_str, model, other_hooks)
+        except ValueError as exc:
+            if "Rate Limit" in str(exc) and fallback_client:
+                print(f"[HOOK-ONLY] {short_id}: Rate Limit auf {provider} → wechsle zu {fallback_provider}")
+                variants = _fetch_hook_variants(fallback_client, topic, titel, text, pattern_str, fallback_model, other_hooks)
+            else:
+                print(f"[HOOK-ONLY] {short_id}: Fehler — Hook bleibt unverändert ({exc})")
+                continue
+        except Exception as exc:
+            print(f"[HOOK-ONLY] {short_id}: Fehler — Hook bleibt unverändert ({exc})")
+            continue
+
+        if not variants:
+            print(f"[HOOK-ONLY] {short_id}: keine Varianten erhalten — Hook bleibt unverändert")
+            continue
+
+        best = hook_engine.select_best_hook(variants, hook_engine.get_recent_hooks())
+        hook_engine.update_session_cache(best)
+        df.at[idx, "Hook"] = best
+        hooks_by_idx[idx] = best
+        print(f"[HOOK-ONLY] {short_id}: '{best}'")
+
+    return df
+
+
 def _deduplicate(
     df: pd.DataFrame, client: OpenAI, topic: str, pattern_str: str, model: str,
     existing_hooks: list[str]

@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('shortflow_theme.json', '.')]
 binaries = []
 hiddenimports = ['fal_client', 'fal_client.client', 'pandas', 'pandas._libs.tslibs.np_datetime', 'pandas._libs.tslibs.nattype', 'pandas._libs.skiplist', 'openpyxl', 'PIL', 'PIL.Image', 'PIL.ImageDraw', 'PIL.PngImagePlugin', 'httpx', 'anyio', 'anyio._backends._asyncio']
 tmp_ret = collect_all('customtkinter')

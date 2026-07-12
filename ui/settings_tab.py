@@ -14,38 +14,31 @@ class SettingsTab(ctk.CTkFrame):
         self._load()
 
     def _build(self):
-        self.columnconfigure(1, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
 
-        # Gemini disabled until provider-specific compatibility is implemented.
-        # To re-enable: uncomment the SegmentedButton and Gemini key rows below.
+        scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        scroll.grid(row=0, column=0, sticky="nsew")
+        scroll.columnconfigure(1, weight=1)
+        f = scroll  # alle Widgets in den Scrollbereich
+
         self._provider_var = tk.StringVar(value="openai")
-        # ctk.CTkLabel(self, text="Textmodell:").grid(row=0, column=0, sticky="w", padx=20, pady=(40, 10))
-        # ctk.CTkSegmentedButton(
-        #     self,
-        #     values=["openai", "gemini"],
-        #     variable=self._provider_var,
-        # ).grid(row=0, column=1, sticky="w", padx=(0, 20), pady=(40, 10))
+        self._gemini_var = tk.StringVar()
 
-        ctk.CTkLabel(self, text="OpenAI API-Key:").grid(row=1, column=0, sticky="w", padx=20, pady=(40, 10))
+        ctk.CTkLabel(f, text="Brain Tab API-Key:").grid(row=1, column=0, sticky="w", padx=20, pady=(40, 10))
         self._openai_var = tk.StringVar()
-        ctk.CTkEntry(self, textvariable=self._openai_var, show="•", width=460).grid(
+        ctk.CTkEntry(f, textvariable=self._openai_var, show="•", width=460).grid(
             row=1, column=1, sticky="ew", padx=(0, 20), pady=(40, 10)
         )
 
-        self._gemini_var = tk.StringVar()
-        # ctk.CTkLabel(self, text="Gemini API-Key:").grid(row=2, column=0, sticky="w", padx=20, pady=10)
-        # ctk.CTkEntry(self, textvariable=self._gemini_var, show="•", width=460).grid(
-        #     row=2, column=1, sticky="ew", padx=(0, 20), pady=10
-        # )
-
-        ctk.CTkLabel(self, text="Bildgenerator API-Key:").grid(row=3, column=0, sticky="w", padx=20, pady=10)
+        ctk.CTkLabel(f, text="Bildgenerator API-Key:").grid(row=3, column=0, sticky="w", padx=20, pady=10)
         self._fal_var = tk.StringVar()
-        ctk.CTkEntry(self, textvariable=self._fal_var, show="•", width=460).grid(
+        ctk.CTkEntry(f, textvariable=self._fal_var, show="•", width=460).grid(
             row=3, column=1, sticky="ew", padx=(0, 20), pady=10
         )
 
-        ctk.CTkLabel(self, text="Output-Ordner:").grid(row=4, column=0, sticky="w", padx=20, pady=10)
-        dir_row = ctk.CTkFrame(self, fg_color="transparent")
+        ctk.CTkLabel(f, text="Output-Ordner:").grid(row=4, column=0, sticky="w", padx=20, pady=10)
+        dir_row = ctk.CTkFrame(f, fg_color="transparent")
         dir_row.grid(row=4, column=1, sticky="ew", padx=(0, 20), pady=10)
         dir_row.columnconfigure(0, weight=1)
         self._dir_var = tk.StringVar()
@@ -54,59 +47,56 @@ class SettingsTab(ctk.CTkFrame):
             row=0, column=1, padx=(8, 0)
         )
 
-        ctk.CTkLabel(self, text="Netlify Token:").grid(row=5, column=0, sticky="w", padx=20, pady=10)
-        self._netlify_var = tk.StringVar()
-        ctk.CTkEntry(self, textvariable=self._netlify_var, show="•", width=460).grid(
+        ctk.CTkLabel(f, text="ElevenLabs API-Key:").grid(row=5, column=0, sticky="w", padx=20, pady=10)
+        self._elevenlabs_var = tk.StringVar()
+        ctk.CTkEntry(f, textvariable=self._elevenlabs_var, show="•", width=460).grid(
             row=5, column=1, sticky="ew", padx=(0, 20), pady=10
         )
 
-        ctk.CTkLabel(self, text="Telegram Bot-Token:").grid(row=6, column=0, sticky="w", padx=20, pady=10)
-        self._tg_bot_var = tk.StringVar()
-        ctk.CTkEntry(self, textvariable=self._tg_bot_var, show="•", width=460).grid(
+        ctk.CTkLabel(f, text="Netlify Token:").grid(row=6, column=0, sticky="w", padx=20, pady=10)
+        self._netlify_var = tk.StringVar()
+        ctk.CTkEntry(f, textvariable=self._netlify_var, show="•", width=460).grid(
             row=6, column=1, sticky="ew", padx=(0, 20), pady=10
         )
 
-        ctk.CTkLabel(self, text="Telegram Chat-ID:").grid(row=7, column=0, sticky="w", padx=20, pady=10)
-        self._tg_chat_var = tk.StringVar()
-        ctk.CTkEntry(self, textvariable=self._tg_chat_var, width=460).grid(
+        ctk.CTkLabel(f, text="Telegram Bot-Token:").grid(row=7, column=0, sticky="w", padx=20, pady=10)
+        self._tg_bot_var = tk.StringVar()
+        ctk.CTkEntry(f, textvariable=self._tg_bot_var, show="•", width=460).grid(
             row=7, column=1, sticky="ew", padx=(0, 20), pady=10
         )
 
-        btn_row = ctk.CTkFrame(self, fg_color="transparent")
-        btn_row.grid(row=8, column=0, columnspan=2, sticky="w", padx=20, pady=(28, 0))
+        ctk.CTkLabel(f, text="Telegram Chat-ID:").grid(row=8, column=0, sticky="w", padx=20, pady=10)
+        self._tg_chat_var = tk.StringVar()
+        ctk.CTkEntry(f, textvariable=self._tg_chat_var, width=460).grid(
+            row=8, column=1, sticky="ew", padx=(0, 20), pady=10
+        )
+
+        btn_row = ctk.CTkFrame(f, fg_color="transparent")
+        btn_row.grid(row=9, column=0, columnspan=2, sticky="w", padx=20, pady=(28, 0))
         ctk.CTkButton(btn_row, text="SPEICHERN", command=self._save).grid(row=0, column=0)
         self._status_lbl = ctk.CTkLabel(btn_row, text="")
         self._status_lbl.grid(row=0, column=1, padx=(14, 0))
 
-        # ── Musik-Zuordnung ───────────────────────────────────────────────────
         ctk.CTkLabel(
-            self,
-            text="── Musik-Zuordnung",
-            font=ctk.CTkFont(size=13, weight="bold"),
-            anchor="w",
-        ).grid(row=9, column=0, columnspan=2, sticky="w", padx=20, pady=(36, 6))
+            f, text="── Musik-Zuordnung",
+            font=ctk.CTkFont(size=13, weight="bold"), anchor="w",
+        ).grid(row=10, column=0, columnspan=2, sticky="w", padx=20, pady=(36, 6))
 
         ctk.CTkSwitch(
-            self,
-            text="Musik-Mapping aktivieren",
-            variable=self._musik_toggle_var,
-        ).grid(row=10, column=0, columnspan=2, sticky="w", padx=20, pady=(0, 14))
+            f, text="Musik-Mapping aktivieren", variable=self._musik_toggle_var,
+        ).grid(row=11, column=0, columnspan=2, sticky="w", padx=20, pady=(0, 14))
 
-        musik_grid = ctk.CTkFrame(self, fg_color="transparent")
-        musik_grid.grid(row=11, column=0, columnspan=2, sticky="w", padx=20)
+        musik_grid = ctk.CTkFrame(f, fg_color="transparent")
+        musik_grid.grid(row=12, column=0, columnspan=2, sticky="w", padx=20, pady=(0, 30))
         musik_grid.columnconfigure(1, weight=1)
 
         tracks = config_manager.DEFAULTS["music_tracks"]
         self._track_vars = []
         for i, entry in enumerate(tracks):
             ctk.CTkLabel(
-                musik_grid,
-                text=entry["label"],
-                font=ctk.CTkFont(size=12),
-                anchor="w",
-                width=200,
+                musik_grid, text=entry["label"],
+                font=ctk.CTkFont(size=12), anchor="w", width=200,
             ).grid(row=i, column=0, sticky="w", pady=5, padx=(0, 14))
-
             var = tk.StringVar()
             self._track_vars.append(var)
             ctk.CTkEntry(musik_grid, textvariable=var, width=300).grid(
@@ -120,6 +110,7 @@ class SettingsTab(ctk.CTkFrame):
         self._gemini_var.set(cfg.get("gemini_key", ""))
         self._fal_var.set(cfg["fal_key"])
         self._dir_var.set(cfg["output_dir"])
+        self._elevenlabs_var.set(cfg.get("elevenlabs_key", ""))
         self._netlify_var.set(cfg.get("netlify_token", ""))
         self._tg_bot_var.set(cfg.get("telegram_bot_token", ""))
         self._tg_chat_var.set(cfg.get("telegram_chat_id", ""))
@@ -148,6 +139,7 @@ class SettingsTab(ctk.CTkFrame):
             "gemini_key": self._gemini_var.get().strip(),
             "fal_key": self._fal_var.get().strip(),
             "output_dir": self._dir_var.get().strip(),
+            "elevenlabs_key": self._elevenlabs_var.get().strip(),
             "netlify_token": self._netlify_var.get().strip(),
             "telegram_bot_token": self._tg_bot_var.get().strip(),
             "telegram_chat_id": self._tg_chat_var.get().strip(),

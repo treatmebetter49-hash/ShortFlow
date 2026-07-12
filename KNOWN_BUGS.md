@@ -1,5 +1,7 @@
 # ShortFlow — Known Bugs
 
+Siehe auch: [[PROJECT_STATUS]] · [[ARCHITECTURE]] · [[2026-06-29-Session]]
+
 Format: `ID · Status · Beschreibung · Ursache · Fix`
 
 ---

@@ -10,8 +10,8 @@ export default {
       colors: {
         ink: "#060608",
         "ink-2": "#0A0A0C",
-        mag: "#FF3D8A",
-        cy: "#26D7F4",
+        gold: "#CFA347",
+        silver: "#9A9AA4",
       },
     },
   },

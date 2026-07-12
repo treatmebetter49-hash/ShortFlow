@@ -8,6 +8,8 @@ import fal_client
 import requests
 import pandas as pd
 
+from modules import tts as tts_module
+
 MODEL = "fal-ai/flux-pro/v1.1"
 
 _MONTHS_DE = [
@@ -98,6 +100,7 @@ def generate_images(
     progress_cb: Callable[[str], None],
     topic: str = "",
     project_dir: Path | None = None,
+    elevenlabs_key: str = "",
 ) -> pd.DataFrame:
     fal_client_instance = None
     if USE_MOCK_IMAGE_API:
@@ -195,6 +198,24 @@ def generate_images(
             progress_cb(f"[{short_name}] ✓ Fertig ({err_count} Fehler)")
         else:
             progress_cb(f"[{short_name}] ✓ Fertig")
+
+        # TTS — nur wenn Key gesetzt und voiceover.mp3 noch nicht existiert
+        if elevenlabs_key:
+            mp3_path = folder / f"{short_name}.mp3"
+            if mp3_path.exists():
+                progress_cb(f"  [SKIP] {short_name}.mp3")
+            else:
+                hook = str(row.get("Hook", "")).strip()
+                text = str(row.get("Text", "")).strip()
+                voiceover_text = f"{hook} {text}".strip()
+                if voiceover_text:
+                    try:
+                        progress_cb(f"  [TTS]  {short_name}.mp3...")
+                        tts_module.generate_voiceover(voiceover_text, mp3_path, elevenlabs_key)
+                        progress_cb(f"  [OK]   {short_name}.mp3")
+                    except Exception as exc:
+                        progress_cb(f"  [ERR]  voiceover.mp3 — {exc}")
+
         df.at[idx, "Status"] = "Fertig"
 
     progress_cb("\n✅ Alle Shorts verarbeitet.")

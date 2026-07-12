@@ -17,7 +17,7 @@ export default function TableRow({ row, selected, onToggle }) {
           type="checkbox"
           checked={selected}
           onChange={onToggle}
-          className="w-3.5 h-3.5 accent-pink-500 bg-white/5 rounded"
+          className="w-3.5 h-3.5 accent-amber-500 bg-white/5 rounded"
         />
       </div>
 
@@ -62,7 +62,7 @@ export default function TableRow({ row, selected, onToggle }) {
       {/* Tags */}
       <div className="px-3 py-3 flex flex-wrap items-start content-start gap-1.5">
         {row.tags.map((tag, i) => (
-          <TagChip key={tag} label={tag} tone={i % 2 === 0 ? "mag" : "cy"} />
+          <TagChip key={tag} label={tag} tone={i % 2 === 0 ? "gold" : "silver"} />
         ))}
       </div>
 

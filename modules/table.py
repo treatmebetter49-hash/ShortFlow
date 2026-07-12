@@ -20,29 +20,30 @@ _COL_WIDTHS = {
     "Titel": 30, "Beschreibung": 48, "Fertig": 14,
 }
 
-# Accent color per column header — matches creator-tool aesthetic
+# Ein Gold-Akzent für alle Spalten-Header. Fertig bleibt Status-Grün —
+# einzige Farbe hier, die eine echte Bedeutung trägt.
 _COL_ACCENT = {
-    "#":            "5C6BC0",   # indigo
-    "Hook":         "F9A825",   # amber / lightning
-    "Text":         "B39DDB",   # soft purple
-    "Prompts":      "4DD0E1",   # cyan
-    "Titel":        "F48FB1",   # pink
-    "Beschreibung": "FFCC80",   # warm amber
-    "Fertig":       "66BB6A",   # green
+    "#":            "CFA347",
+    "Hook":         "CFA347",
+    "Text":         "CFA347",
+    "Prompts":      "CFA347",
+    "Titel":        "CFA347",
+    "Beschreibung": "CFA347",
+    "Fertig":       "3ECF6E",
 }
 
 # ── Theme palette ─────────────────────────────────────────────────────────────
-_BG_HEADER  = "0D0F1C"
-_BG_ROW_A   = "191B2E"
-_BG_ROW_B   = "1E2038"
-_TEXT_BODY  = "BFC3E0"
-_TEXT_NUM   = "5C6BC0"
-_TEXT_HOOK  = "FFFFFF"
-_BORDER     = "252840"
-_BG_FERTIG  = "1A3A28"
-_FG_FERTIG  = "4CAF50"
-_FG_OFFEN   = "555870"
-_TAB_COLOR  = "5C6BC0"
+_BG_HEADER  = "120F09"
+_BG_ROW_A   = "17130D"
+_BG_ROW_B   = "1C170F"
+_TEXT_BODY  = "E7E4DE"
+_TEXT_NUM   = "9A9AA4"
+_TEXT_HOOK  = "F1EAD8"
+_BORDER     = "2A2521"
+_BG_FERTIG  = "16301F"
+_FG_FERTIG  = "3ECF6E"
+_FG_OFFEN   = "635C50"
+_TAB_COLOR  = "CFA347"
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -195,8 +196,8 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         "*{box-sizing:border-box;margin:0;padding:0}"
         ":root{"
         "--bg:#0b0b10;--surface:#111118;--surface2:#16161f;--border:#252535;--border2:#2e2e45;"
-        "--purple:#9b59b6;--purple2:#bb86fc;--red:#e74c3c;--green:#2ecc71;"
-        "--yellow:#f1c40f;--blue:#3498db;--pink:#e91e63;--text:#e2e2e2;--muted:#999;--dim:#555"
+        "--gold:#cfa347;--gold2:#f2d78f;--green:#3ecf6e;"
+        "--text:#e7e4de;--muted:#948f89;--dim:#59544f"
         "}"
         "body{background:var(--bg);color:var(--text);"
         "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
@@ -206,7 +207,7 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         ".logo-area{display:flex;align-items:center;gap:14px}"
         ".logo-img{width:54px;height:54px;border-radius:13px;object-fit:cover;flex-shrink:0}"
         ".logo-name{font-size:26px;font-weight:900;letter-spacing:-.02em;"
-        "background:linear-gradient(90deg,#e74c3c,#9b59b6,#3498db);"
+        "background:linear-gradient(90deg,#8f6a28,#f2d78f);"
         "-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}"
         ".logo-sub{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.03em}"
         ".sf-meta{display:flex;gap:.6rem;margin-left:auto;flex-wrap:wrap}"
@@ -227,9 +228,8 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         "thead th{padding:10px;text-align:left;font-size:13px;font-weight:700;"
         "letter-spacing:.04em;border:1px solid var(--border2);white-space:nowrap}"
         "thead th.center{text-align:center}"
-        ".th-num,.th-date,.th-tag,.th-short,.th-musik{color:var(--muted)}"
-        ".th-hook{color:var(--yellow)}.th-text{color:var(--purple2)}.th-titel{color:var(--green)}"
-        ".th-yt{color:var(--red)}.th-ig{color:var(--pink)}.th-status{color:var(--blue)}"
+        ".th-num,.th-date,.th-tag,.th-short,.th-musik,"
+        ".th-hook,.th-text,.th-titel,.th-yt,.th-ig,.th-status{color:var(--muted)}"
         "tbody tr{border-bottom:1px solid var(--border);transition:background .15s,opacity .35s}"
         "tbody tr:hover{background:#13131e}"
         "tbody tr.done{opacity:.32}"
@@ -257,33 +257,33 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         "background:var(--surface2);border:1px solid var(--border2);color:var(--muted);"
         "font-size:10px;padding:3px 7px;border-radius:4px;cursor:pointer;transition:all .15s;"
         "white-space:nowrap;font-family:inherit}"
-        ".copy-btn:hover{border-color:var(--purple);color:var(--purple2)}"
+        ".copy-btn:hover{border-color:var(--gold);color:var(--gold2)}"
         ".copy-btn.copied{background:#0d2a1a;border-color:var(--green);color:var(--green)}"
         ".td-status{text-align:center;vertical-align:middle}"
         ".status-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;"
         "border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;"
         "transition:all .2s;font-family:inherit}"
         ".status-btn.pending{background:var(--surface2);border:1px solid var(--border2);color:var(--dim)}"
-        ".status-btn.pending:hover{border-color:var(--purple);color:var(--purple2)}"
+        ".status-btn.pending:hover{border-color:var(--gold);color:var(--gold2)}"
         ".status-btn.fertig{background:#0d2a1a;border:1px solid #1a5228;color:var(--green)}"
         ".sf-footer{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"
         "padding:.6rem 1.5rem .8rem}"
         ".footer-box{background:var(--surface);border:1px solid var(--border);"
         "border-radius:10px;padding:9px 14px}"
-        ".footer-title{font-size:11px;font-weight:700;color:var(--purple);margin-bottom:7px;"
+        ".footer-title{font-size:11px;font-weight:700;color:var(--gold);margin-bottom:7px;"
         "text-transform:uppercase;letter-spacing:.05em}"
         ".footer-list{list-style:none}"
         ".footer-list li{font-size:12px;color:var(--muted);padding:2px 0}"
         ".export-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}"
         ".exp-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;"
         "border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:inherit}"
-        ".exp-btn.xls{background:#0d2a1a;color:#2ecc71;border:1px solid #1a5228}"
-        ".exp-btn.csv{background:#0d1c2a;color:#3498db;border:1px solid #1a3a5a}"
-        ".exp-btn.txt{background:#1a1028;color:#bb86fc;border:1px solid #3a2060}"
+        ".exp-btn.xls,.exp-btn.csv,.exp-btn.txt{background:var(--surface2);color:var(--muted);"
+        "border:1px solid var(--border2)}"
+        ".exp-btn.xls:hover,.exp-btn.csv:hover,.exp-btn.txt:hover{border-color:var(--gold);color:var(--gold2)}"
         ".hinweis-text{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:4px}"
         ".footer-brand{display:flex;flex-direction:row;align-items:center;gap:12px}"
         ".footer-brand-name{font-size:18px;font-weight:900;letter-spacing:-.02em;"
-        "background:linear-gradient(90deg,#e74c3c,#9b59b6,#3498db);"
+        "background:linear-gradient(90deg,#8f6a28,#f2d78f);"
         "-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}"
         ".footer-brand-slogan{font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px}"
         ".field-copied{opacity:.42;transition:opacity .3s}"
@@ -516,20 +516,20 @@ def save_ig_html(df: pd.DataFrame, path: str | Path, topic: str = "") -> None:
 
     _CSS = (
         "*{box-sizing:border-box;margin:0;padding:0}"
-        "body{background:#0b0b10;color:#e2e2e2;"
+        "body{background:#0b0b10;color:#e7e4de;"
         "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
         "padding:12px;max-width:620px;margin:0 auto}"
         "header{padding:14px 0 12px;border-bottom:1px solid #252535;margin-bottom:14px}"
         "h1{font-size:21px;font-weight:900;letter-spacing:-.01em;"
-        "background:linear-gradient(90deg,#e74c3c,#9b59b6,#3498db);"
+        "background:linear-gradient(90deg,#8f6a28,#f2d78f);"
         "-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}"
         ".hdr-meta{font-size:12px;color:#777;margin-top:5px}"
         ".ios-hint{background:#1a1a10;border:1px solid #3a3a10;border-radius:8px;"
         "padding:10px 12px;margin-bottom:14px;font-size:12px;color:#aaa;line-height:1.5}"
-        ".ios-hint strong{color:#f1c40f}"
+        ".ios-hint strong{color:#cfa347}"
         ".card{background:#111118;border:1px solid #252535;border-radius:12px;padding:14px;margin-bottom:13px}"
         ".card-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}"
-        ".num{background:#1a1a2e;color:#9b59b6;font-size:11px;font-weight:700;"
+        ".num{background:#17130d;color:#cfa347;font-size:11px;font-weight:700;"
         "padding:3px 9px;border-radius:5px;white-space:nowrap}"
         ".cdate{color:#666;font-size:12px;white-space:nowrap}"
         ".titel{font-size:14px;font-weight:600;color:#e2e2e2;margin-bottom:10px;line-height:1.4}"
@@ -538,7 +538,7 @@ def save_ig_html(df: pd.DataFrame, path: str | Path, topic: str = "") -> None:
         "border-radius:8px;cursor:pointer;font-family:inherit;margin-bottom:10px;"
         "transition:background .15s,border-color .15s,color .15s;"
         "-webkit-tap-highlight-color:rgba(0,0,0,0)}"
-        ".copy-btn.sel{background:#1a1a0d;border-color:#f1c40f;color:#f1c40f}"
+        ".copy-btn.sel{background:#1a1a0d;border-color:#cfa347;color:#cfa347}"
         ".copy-btn.ok{background:#0d2a1a;border-color:#2ecc71;color:#2ecc71}"
         ".ig-ta{display:block;width:100%;min-height:140px;background:#0d0d14;"
         "border:1px solid #1e1e2e;color:#ccc;font-size:14px;line-height:1.7;"

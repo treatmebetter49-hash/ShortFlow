@@ -1,7 +1,7 @@
 export default function TagChip({ label, tone }) {
   const cls =
-    tone === "mag" ? "chip chip-mag"
-    : tone === "cy" ? "chip chip-cy"
+    tone === "gold" ? "chip chip-gold"
+    : tone === "silver" ? "chip chip-silver"
     : "chip";
   return <span className={cls}>#{label}</span>;
 }

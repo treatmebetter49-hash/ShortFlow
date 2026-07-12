@@ -12,6 +12,8 @@ import customtkinter as ctk
 import pandas as pd
 
 from modules import brain, table, netlify_telegram, config_manager
+from ui.gradient_bar import GradientProgressBar
+from ui.theme import GLASS as _GLASS
 
 def _unique_html_path(base: Path) -> Path:
     if not base.exists():
@@ -101,14 +103,14 @@ class BrainTab(ctk.CTkFrame):
         self._month_count_lbl = ctk.CTkLabel(self._monat_frame, text=f"→ {_init_days} Shorts")
         self._month_count_lbl.pack(side="left", padx=(4, 20))
 
-        self._gen_btn = ctk.CTkButton(top, text="TABELLE GENERIEREN", command=self._start_generate)
+        self._gen_btn = ctk.CTkButton(top, text="TABELLE GENERIEREN", command=self._start_generate,
+                                      **_GLASS)
         self._gen_btn.pack(side="left")
         self._status_lbl = ctk.CTkLabel(top, text="Bereit")
         self._status_lbl.pack(side="left", padx=(16, 0))
 
         # ── Progress bar ──────────────────────────────────────────────────────
-        self._progress_bar = ctk.CTkProgressBar(self)
-        self._progress_bar.set(0)
+        self._progress_bar = GradientProgressBar(self, height=6)
         self._progress_bar.pack(fill="x", padx=20, pady=(8, 0))
 
         # ── Table preview ─────────────────────────────────────────────────────
@@ -132,21 +134,32 @@ class BrainTab(ctk.CTkFrame):
         # ── Bottom buttons ────────────────────────────────────────────────────
         bot = ctk.CTkFrame(self, fg_color="transparent")
         bot.pack(fill="x", padx=20, pady=(0, 16))
-        self._open_btn = ctk.CTkButton(bot, text="Tabelle öffnen", command=self._open_html, state="disabled")
+        self._open_btn = ctk.CTkButton(bot, text="Tabelle öffnen", command=self._open_html,
+                                       state="disabled", **_GLASS)
         self._open_btn.pack(side="left", padx=(0, 20))
         ctk.CTkButton(
             bot, text="→  WEITER ZU MACHINE",
             font=ctk.CTkFont(weight="bold"),
             command=self._go_to_machine,
+            **_GLASS,
         ).pack(side="left")
         ctk.CTkButton(
             bot, text="iPhone IG Export",
             command=self._save_ig_html,
+            **_GLASS,
         ).pack(side="left", padx=(16, 0))
         ctk.CTkButton(
             bot, text="Vorhandene Tabelle laden",
             command=self._load_project,
+            **_GLASS,
         ).pack(side="right")
+        self._hooks_btn = ctk.CTkButton(
+            bot, text="Nur Hooks neu generieren",
+            command=self._start_regenerate_hooks,
+            state="disabled",
+            **_GLASS,
+        )
+        self._hooks_btn.pack(side="right", padx=(0, 16))
 
     def _on_inner_configure(self, _event=None):
         self._canvas.configure(scrollregion=self._canvas.bbox("all"))
@@ -243,6 +256,7 @@ class BrainTab(ctk.CTkFrame):
         self._df = df
         self._render_table(df)
         self._gen_btn.configure(state="normal")
+        self._hooks_btn.configure(state="normal")
 
         topic = self._topic_var.get().strip()
         cfg = self._get_config()
@@ -364,7 +378,9 @@ class BrainTab(ctk.CTkFrame):
         if not self._animating or self._current_phase != 4:
             return
         self._elapsed_secs += 1
-        self._status_lbl.configure(text=f"4/4 Tabelle wird gebaut · {self._elapsed_secs}s")
+        s = self._elapsed_secs
+        time_str = f"{s // 60}m {s % 60:02d}s" if s >= 60 else f"{s}s"
+        self._status_lbl.configure(text=f"4/4 Tabelle wird gebaut · {time_str}")
         self.after(1000, self._tick_phase4)
 
     # ── Table rendering ───────────────────────────────────────────────────────
@@ -453,6 +469,71 @@ class BrainTab(ctk.CTkFrame):
             return
         self._on_go_to_machine(self._df, self._topic_var.get().strip(), self._project_dir)
 
+    # ── Nur Hooks neu generieren ────────────────────────────────────────────
+
+    def _start_regenerate_hooks(self):
+        if self._df is None:
+            messagebox.showwarning("Fehler", "Bitte zuerst eine Tabelle laden oder generieren.")
+            return
+        topic = self._topic_var.get().strip()
+        if not topic:
+            messagebox.showwarning("Fehler", "Bitte ein Thema eingeben.")
+            return
+        if not messagebox.askyesno(
+            "Nur Hooks neu generieren",
+            f"{len(self._df)} Hooks werden neu generiert (echter API-Call). "
+            "Text, Titel, Prompts und Bilder bleiben unverändert.\n\nFortfahren?",
+        ):
+            return
+        cfg = self._get_config()
+        provider = cfg.get("provider", "openai")
+        api_key = cfg.get("gemini_key", "") if provider == "gemini" else cfg.get("openai_key", "")
+        fallback_provider = "openai" if provider == "gemini" else "gemini"
+        fallback_key = cfg.get("openai_key", "") if provider == "gemini" else cfg.get("gemini_key", "")
+        self._hooks_btn.configure(state="disabled")
+        self._status_lbl.configure(text="Hooks werden neu generiert...")
+        threading.Thread(
+            target=self._regenerate_hooks_thread,
+            args=(self._df.copy(), topic, api_key, provider, fallback_key, fallback_provider),
+            daemon=True,
+        ).start()
+
+    def _regenerate_hooks_thread(self, df: pd.DataFrame, topic: str, api_key: str, provider: str, fallback_key: str, fallback_provider: str):
+        try:
+            new_df = brain.regenerate_hooks_only(
+                df, topic, api_key, provider=provider,
+                fallback_key=fallback_key, fallback_provider=fallback_provider,
+            )
+            self.after(0, self._on_hooks_success, new_df)
+        except Exception as exc:
+            import traceback
+            print("\n─── FEHLER IN _regenerate_hooks_thread ───")
+            print(traceback.format_exc())
+            print("──────────────────────────\n")
+            self.after(0, self._on_hooks_error, str(exc))
+
+    def _on_hooks_success(self, df: pd.DataFrame):
+        self._df = df
+        self._render_table(df)
+        self._hooks_btn.configure(state="normal")
+        self._status_lbl.configure(text=f"{len(df)} Hooks neu generiert ✓")
+        if self._html_path:
+            try:
+                table.save_html(df, self._html_path, topic=self._topic_var.get().strip(),
+                                music_config=self._music_config())
+                errors = table.validate_html(self._html_path)
+                if errors:
+                    print(f"[HTML VALIDATION FEHLER] {errors}")
+            except Exception as exc:
+                print(f"[HOOK-ONLY HTML SAVE FEHLER] {exc}")
+        elif self._project_dir:
+            self._auto_save_html(df, self._topic_var.get().strip())
+
+    def _on_hooks_error(self, msg: str):
+        self._hooks_btn.configure(state="normal")
+        self._status_lbl.configure(text="Fehler")
+        messagebox.showerror("Fehler", msg)
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _set_status(self, text: str, busy: bool):
@@ -462,7 +543,6 @@ class BrainTab(ctk.CTkFrame):
             self._animating = True
             self._elapsed_secs = 0
             self._current_phase = 1
-            self._progress_bar.configure(mode="determinate")
             self._progress_bar.set(0.25)
             self._status_lbl.configure(text="1/4 Anfrage wird vorbereitet")
             self.after(1500, lambda: self._advance_phase(2))
@@ -521,6 +601,7 @@ class BrainTab(ctk.CTkFrame):
         self._df = df
         self._project_dir = project_dir
         self._topic_var.set(topic)
+        self._hooks_btn.configure(state="normal")
         stem = re.sub(r"[^\w\s-]", "", topic)
         stem = re.sub(r"\s+", "-", stem)
         self._file_stem = f"{stem}-Short-Tabelle" if stem else "Short-Tabelle"

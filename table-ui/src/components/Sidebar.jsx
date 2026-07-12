@@ -22,12 +22,12 @@ export default function Sidebar() {
         <div
           className="w-[72px] h-[72px] rounded-[20px] flex items-center justify-center text-[32px] font-bold"
           style={{
-            background: "radial-gradient(120% 80% at 30% 20%, rgba(255,61,138,0.7), transparent 55%), radial-gradient(120% 80% at 70% 90%, rgba(38,215,244,0.7), transparent 55%), linear-gradient(160deg, #18181f, #08080c)",
-            border: "1px solid rgba(255,255,255,0.14)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 24px -10px rgba(255,61,138,0.5), 0 8px 24px -10px rgba(38,215,244,0.5)",
+            background: "linear-gradient(155deg, #17140d 0%, #0b0a08 60%)",
+            border: "1px solid rgba(207,163,71,0.3)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -6px 14px rgba(0,0,0,0.5), 0 8px 24px -10px rgba(0,0,0,0.6)",
           }}
         >
-          <span style={{ background: "linear-gradient(180deg,#FFB0CC,#9BEAF7)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <span style={{ background: "linear-gradient(180deg,#F2D78F,#CFA347 65%,#8F6A28)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             S
           </span>
         </div>
@@ -68,11 +68,11 @@ export default function Sidebar() {
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center text-[15px] font-bold shrink-0"
           style={{
-            background: "radial-gradient(120% 80% at 30% 20%, rgba(255,61,138,0.6), transparent 55%), radial-gradient(120% 80% at 70% 90%, rgba(38,215,244,0.6), transparent 55%), linear-gradient(160deg, #18181f, #08080c)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: "linear-gradient(155deg, #17140d 0%, #0b0a08 60%)",
+            border: "1px solid rgba(207,163,71,0.3)",
           }}
         >
-          <span style={{ background: "linear-gradient(180deg,#FFB0CC,#9BEAF7)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <span style={{ background: "linear-gradient(180deg,#F2D78F,#CFA347 65%,#8F6A28)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             S
           </span>
         </div>

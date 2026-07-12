@@ -1,5 +1,7 @@
 # ShortFlow — Architecture
 
+Siehe auch: [[PROJECT_STATUS]] · [[KNOWN_BUGS]] · [[handoff]]
+
 ---
 
 ## Überblick
