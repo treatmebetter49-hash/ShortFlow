@@ -30,7 +30,8 @@
       "Bash(sips -Z 54 /tmp/sf-logo-orig.png --out /tmp/sf-logo-54.png)",
       "Read(//tmp/**)",
       "Bash(sips -Z 70 /tmp/sf-logo-orig.png --out /tmp/sf-logo-70.png)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(open *)"
     ]
   }
 }
