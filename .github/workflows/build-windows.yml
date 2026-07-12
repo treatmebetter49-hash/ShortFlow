@@ -27,6 +27,33 @@ jobs:
       - name: EXE bauen
         run: pyinstaller ShortFlow-windows.spec --clean --noconfirm
 
+      - name: Smoke-Test (Startet die EXE, faengt Startup-Crash ab)
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:USERPROFILE "ShortFlow_log.txt"
+          if (Test-Path $log) { Remove-Item $log -Force }
+          $exe = "dist/ShortFlow/ShortFlow.exe"
+          Write-Host "Starte $exe ..."
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) {
+            Write-Host "::error::EXE ist beim Start abgestuerzt (Exit-Code $($p.ExitCode))."
+            if (Test-Path $log) {
+              Write-Host "----- ShortFlow_log.txt -----"
+              Get-Content $log | Write-Host
+              Write-Host "----- Ende Log -----"
+            } else {
+              Write-Host "Kein Logfile gefunden."
+            }
+          } else {
+            Write-Host "EXE laeuft nach 20s noch -> sauberer Start. Beende Prozess."
+            Stop-Process -Id $p.Id -Force
+            if (Test-Path $log) {
+              Write-Host "Hinweis: Logfile existiert trotzdem:"
+              Get-Content $log | Write-Host
+            }
+          }
+
       - name: EXE als Download bereitstellen
         uses: actions/upload-artifact@v4
         with:
