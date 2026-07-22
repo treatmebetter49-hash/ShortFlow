@@ -47,6 +47,7 @@ class BrainTab(ctk.CTkFrame):
         self._animating = False
         self._elapsed_secs = 0
         self._current_phase = 0
+        self._phase_after_id = None
         self._build()
 
     def _build(self):
@@ -252,6 +253,7 @@ class BrainTab(ctk.CTkFrame):
     def _on_success(self, df: pd.DataFrame):
         self._animating = False
         self._current_phase = 0
+        self._cancel_phase_timer()
         self._progress_bar.set(1.0)
         self._df = df
         self._render_table(df)
@@ -280,6 +282,7 @@ class BrainTab(ctk.CTkFrame):
     def _on_error(self, msg: str):
         self._animating = False
         self._current_phase = 0
+        self._cancel_phase_timer()
         self._progress_bar.set(0)
         self._gen_btn.configure(state="normal")
         self._status_lbl.configure(text="Fehler")
@@ -357,7 +360,13 @@ class BrainTab(ctk.CTkFrame):
         if self._html_path and self._html_path.exists():
             webbrowser.open(self._html_path.as_uri())
 
+    def _cancel_phase_timer(self):
+        if self._phase_after_id is not None:
+            self.after_cancel(self._phase_after_id)
+            self._phase_after_id = None
+
     def _advance_phase(self, phase: int):
+        self._phase_after_id = None
         if not self._animating:
             return
         _PHASES = [
@@ -370,21 +379,22 @@ class BrainTab(ctk.CTkFrame):
         self._progress_bar.set(_PHASES[phase - 1][0])
         self._status_lbl.configure(text=_PHASES[phase - 1][1])
         if phase == 2:
-            self.after(6000, lambda: self._advance_phase(3))
+            self._phase_after_id = self.after(6000, lambda: self._advance_phase(3))
         elif phase == 3:
-            self.after(5000, lambda: self._advance_phase(4))
+            self._phase_after_id = self.after(5000, lambda: self._advance_phase(4))
         elif phase == 4:
             self._elapsed_secs = 0
             self._tick_phase4()
 
     def _tick_phase4(self):
+        self._phase_after_id = None
         if not self._animating or self._current_phase != 4:
             return
         self._elapsed_secs += 1
         s = self._elapsed_secs
         time_str = f"{s // 60}m {s % 60:02d}s" if s >= 60 else f"{s}s"
         self._status_lbl.configure(text=f"4/4 Tabelle wird gebaut · {time_str}")
-        self.after(1000, self._tick_phase4)
+        self._phase_after_id = self.after(1000, self._tick_phase4)
 
     # ── Table rendering ───────────────────────────────────────────────────────
 
@@ -543,12 +553,13 @@ class BrainTab(ctk.CTkFrame):
         self._status_lbl.configure(text=text)
         self._gen_btn.configure(state="disabled" if busy else "normal")
         if busy:
+            self._cancel_phase_timer()
             self._animating = True
             self._elapsed_secs = 0
             self._current_phase = 1
             self._progress_bar.set(0.25)
             self._status_lbl.configure(text="1/4 Anfrage wird vorbereitet")
-            self.after(1500, lambda: self._advance_phase(2))
+            self._phase_after_id = self.after(1500, lambda: self._advance_phase(2))
 
     # ── Load existing project ─────────────────────────────────────────────────
 
