@@ -333,9 +333,12 @@ class BrainTab(ctk.CTkFrame):
             tg_bot = cfg.get("telegram_bot_token", "")
             tg_chat = cfg.get("telegram_chat_id", "")
             if netlify_token and tg_bot and tg_chat:
+                def _set_status(text):
+                    self._status_lbl.configure(text=text)
+
                 def _deploy():
                     try:
-                        self._status_lbl.configure(text="Lade auf Netlify hoch...")
+                        self.after(0, _set_status, "Lade auf Netlify hoch...")
                         site_id = cfg.get("netlify_site_id", "")
                         live_url = netlify_telegram.upload_to_netlify(ig_path, netlify_token, site_id)
                         topic = self._topic_var.get().strip()
@@ -343,9 +346,9 @@ class BrainTab(ctk.CTkFrame):
                             tg_bot, tg_chat,
                             f"📱 <b>ShortFlow IG Export</b>\n{topic}\n\n{live_url}"
                         )
-                        self._status_lbl.configure(text=f"✅ Telegram-Link gesendet")
+                        self.after(0, _set_status, "✅ Telegram-Link gesendet")
                     except Exception as exc:
-                        self._status_lbl.configure(text=f"Netlify/Telegram Fehler: {exc}")
+                        self.after(0, _set_status, f"Netlify/Telegram Fehler: {exc}")
                 threading.Thread(target=_deploy, daemon=True).start()
         except Exception as exc:
             messagebox.showerror("IG Export fehlgeschlagen", str(exc))
