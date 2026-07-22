@@ -34,6 +34,75 @@ Datei: `modules/config_manager.py`, Zeile 4–6
 
 ---
 
+### BUG-005 · BEHOBEN · 2026-07-22
+**Prompts alter Shorts gehen bei erneuter Generierung verloren**
+
+Beschreibung: Wurden einem Monats-Projekt neue Shorts hinzugefügt, überschrieb `save_prompts_json()` die `.prompts.json` komplett mit nur den neuen Rows — Prompts bereits vorhandener Shorts waren danach weg.
+
+Ursache: `save_prompts_json()` baute das JSON ausschließlich aus dem übergebenen `df`, ohne mit dem bestehenden Dateiinhalt zu mergen. `ui/brain_tab.py:300` übergibt bei Nachgenerierung nur das neue Batch.
+
+Fix: Bestehende JSON wird jetzt geladen und mit den neuen Werten aktualisiert (`dict.update`) statt überschrieben.
+
+Datei: `modules/table.py`, Zeile 643
+
+Beweis: Repro-Test — bestehende JSON (`Short01`, `Short02`) + neues df (`Short03`, `Short04`) ergab vorher nur `Short03`/`Short04`, danach alle vier Einträge.
+
+---
+
+### BUG-006 · BEHOBEN · 2026-07-22
+**localStorage-Fertig-Markierungen gehen bei Neugenerierung an anderem Tag verloren**
+
+Beschreibung: Der localStorage-Key-Präfix für "Fertig"-Markierungen enthielt das aktuelle Renderdatum. Wurde die HTML-Tabelle eines Projekts an einem späteren Tag erneut geschrieben (z. B. neue Shorts angehängt), änderte sich der Präfix, und bereits gesetzte Markierungen waren unter dem neuen Präfix nicht mehr auffindbar.
+
+Ursache: `today = date.today().strftime(...)` floss in `_sf_pfx_js` ein, obwohl das Präfix stabil pro Projekt-Datei sein muss, nicht pro Renderzeitpunkt.
+
+Fix: Präfix wird jetzt aus einem SHA256-Hash des aufgelösten Datei-Pfads gebildet (`sf_<hash>_`), bleibt damit über mehrere Renders derselben Datei stabil. `today`-Variable komplett entfernt, da sonst nirgends im Template verwendet.
+
+Datei: `modules/table.py`, Zeile 113–120, 365
+
+Beweis: Zwei aufeinanderfolgende `save_html()`-Aufrufe auf dieselbe Datei erzeugen denselben `_sfPfx`.
+
+---
+
+### BUG-007 · BEHOBEN · 2026-07-22
+**Tkinter-Thread-Safety-Verletzung in `_deploy()` (Netlify-Upload)**
+
+Beschreibung: Der Netlify/Telegram-Upload läuft in einem Background-Thread, aktualisierte dabei aber das Status-Label direkt (`self._status_lbl.configure(...)`) statt über den Hauptthread — anders als `_generate`/`_regenerate_hooks_thread`, die korrekt `self.after(0, ...)` nutzen. Tkinter-Widget-Zugriffe aus Nicht-Hauptthreads sind undefiniert/unsicher.
+
+Ursache: `_deploy()` in `ui/brain_tab.py` rief `.configure()` direkt im Thread auf.
+
+Fix: Alle drei Status-Updates laufen jetzt über `self.after(0, _set_status, text)`.
+
+Datei: `ui/brain_tab.py`, Zeile 336–349
+
+---
+
+### BUG-008 · BEHOBEN · 2026-07-22
+**Stale `after()`-Timer können Phasen-Animation eines neuen Laufs überspringen lassen**
+
+Beschreibung: `_advance_phase`/`_tick_phase4` planten `after()`-Callbacks, die nur über die Flags `_animating`/`_current_phase` no-op'ten. Ein liegengebliebener Timer aus einem vorherigen Lauf konnte während eines neuen Laufs feuern und dessen `_current_phase` unerwartet vorspringen lassen (kein `after_cancel()` im gesamten File vorhanden).
+
+Ursache: Fehlendes Timer-Tracking/Cancelling beim Start eines neuen Laufs bzw. bei Reset nach Erfolg/Fehler.
+
+Fix: Pending-Timer-ID wird jetzt in `self._phase_after_id` gehalten und per `_cancel_phase_timer()` vor jedem Neuplanen sowie in `_on_success`, `_on_error` und `_set_status` (Laufstart) gecancelt.
+
+Datei: `ui/brain_tab.py`, Zeile 360–398, 542–551
+
+---
+
+### BUG-009 · BEHOBEN · 2026-07-22
+**Repo-Root `config.json` mit echten API-Keys war git-getrackt**
+
+Beschreibung: `config.json` im Repo-Root stand schon in `.gitignore`, war aber seit dem allerersten Commit getrackt (Ignore greift nicht rückwirkend) und enthielt echte `openai_key`/`fal_key`-Werte. Betrifft nicht den Laufzeit-Pfad der App (`~/Library/Application Support/ShortFlow/config.json`), war ein Dev-Leftover.
+
+Fix: `git rm --cached config.json` — lokale Datei bleibt erhalten, Tracking gestoppt. `config.json.example` als Referenz-Template ergänzt.
+
+Datei: `config.json` (Repo-Root)
+
+Offen bleibt: Keys stehen weiterhin in der Git-Historie (History-Rewrite bewusst nicht gemacht, siehe Commit `dc217df`). Key-Rotation bei OpenAI/FAL ist manueller Schritt des Repo-Owners.
+
+---
+
 ## Offen
 
 ### BUG-003 · OFFEN
