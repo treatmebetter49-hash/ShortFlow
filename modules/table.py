@@ -642,8 +642,10 @@ def load_xlsx(path: str | Path) -> pd.DataFrame:
 
 def save_prompts_json(df: pd.DataFrame, path: str | Path) -> None:
     import json
-    data = {str(row["Short"]): str(row.get("Prompts", "")) for _, row in df.iterrows()}
-    Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    path = Path(path)
+    data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    data.update({str(row["Short"]): str(row.get("Prompts", "")) for _, row in df.iterrows()})
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_prompts_json(path: str | Path) -> dict:
