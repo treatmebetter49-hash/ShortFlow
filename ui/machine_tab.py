@@ -113,6 +113,9 @@ class MachineTab(ctk.CTkFrame):
             messagebox.showwarning("Fehler", "FAL API Key fehlt. Bitte in den Einstellungen eintragen.")
             return
 
+        if self._project_dir is None:
+            self._project_dir = machine.resolve_project_dir(output_dir, self._topic)
+
         is_resume = self._is_resume
         self._is_resume = False
         if not is_resume:

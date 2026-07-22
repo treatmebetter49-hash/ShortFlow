@@ -93,6 +93,26 @@ class BillingError(Exception):
     pass
 
 
+def resolve_project_dir(output_dir: str | Path, topic: str) -> Path:
+    """Bestimmt den Projekt-Ordner für den Fallback-Fall (kein project_dir übergeben).
+
+    Muss beim ersten Aufruf durch den Caller persistiert und bei Resume
+    unverändert wiederverwendet werden - sonst erzeugt ein Monatswechsel
+    zwischen Start und Resume einen neuen, leeren Ordner.
+    """
+    output_dir = Path(output_dir)
+    today = date.today()
+    safe_topic = re.sub(r'[<>:"/\\|?*]', '', topic).strip() or "Shorts"
+    month_name = f"{today.month:02d}.{_MONTHS_DE[today.month - 1]}'{today.year % 100:02d}"
+    existing = None
+    for d in output_dir.iterdir():
+        if d.is_dir() and d.name.startswith(safe_topic):
+            existing = d
+            break
+    topic_dir = existing if existing else output_dir / safe_topic
+    return topic_dir / month_name
+
+
 def generate_images(
     df: pd.DataFrame,
     output_dir: str | Path,
@@ -118,18 +138,9 @@ def generate_images(
         project_dir.mkdir(parents=True, exist_ok=True)
         progress_cb(f"Projekt-Ordner: {project_dir.parent.name}/{project_dir.name}")
     else:
-        today = date.today()
-        safe_topic = re.sub(r'[<>:"/\\|?*]', '', topic).strip() or "Shorts"
-        month_name = f"{today.month:02d}.{_MONTHS_DE[today.month - 1]}'{today.year % 100:02d}"
-        existing = None
-        for d in output_dir.iterdir():
-            if d.is_dir() and d.name.startswith(safe_topic):
-                existing = d
-                break
-        topic_dir = existing if existing else output_dir / safe_topic
-        project_dir = topic_dir / month_name
+        project_dir = resolve_project_dir(output_dir, topic)
         project_dir.mkdir(parents=True, exist_ok=True)
-        progress_cb(f"Projekt-Ordner: {topic_dir.name}/{month_name}")
+        progress_cb(f"Projekt-Ordner: {project_dir.parent.name}/{project_dir.name}")
     progress_cb(f"[DBG] Projektordner (absolut): {project_dir}")
 
     df = df.copy()

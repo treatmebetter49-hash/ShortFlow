@@ -103,20 +103,24 @@ Offen bleibt: Keys stehen weiterhin in der Git-Historie (History-Rewrite bewusst
 
 ---
 
-## Offen
+### BUG-003 · BEHOBEN · 2026-07-22
+**Resume über Monatswechsel (nicht Mitternacht) ignoriert bereits generierte Bilder — nur im CSV-Fallback-Pfad**
 
-### BUG-003 · OFFEN
-**Resume nach Tageswechsel ignoriert bereits generierte Bilder**
+Beschreibung ursprünglich: „Läuft eine Generierung über Mitternacht, wird beim Resume ein neuer `project_dir` mit dem neuen Datum erstellt.“ Codex-Analyse (2026-07-22) hat das präzisiert: Der normale Brain→Machine-Workflow ist davon **nicht** betroffen, da `brain_tab.py` den `project_dir` vorab bestimmt und über `load_from_brain()` unverändert weiterreicht — Tageswechsel ändert daran nichts. Auch der Fallback-Pfad in `machine.py` (wenn `project_dir=None`) hängt nur von Monat+Jahr ab, nicht vom Tag — reiner Mitternachtswechsel innerhalb des Monats erzeugt gar keinen neuen Ordner.
 
-Beschreibung: Läuft eine Generierung über Mitternacht, wird beim Resume ein neuer `project_dir` mit dem neuen Datum erstellt. Die Skip-Logik findet keine Dateien im neuen Ordner und generiert alle Bilder nochmal.
+Real reproduzierbar bleibt ein engerer Fall: **CSV-Ladeworkflow in `ui/machine_tab.py`** (`_load_csv()`) setzt nie einen `project_dir`, der bleibt `None`. Startet eine Generierung z. B. am 31.07. und wird nach Abbruch am 01.08. fortgesetzt, berechnete der Fallback bei jedem Aufruf neu aus `date.today()` — der Ordner wechselt von `.../07.Juli'26` auf `.../08.August'26`, Skip-Logik findet dort keine vorhandenen Bilder.
 
-Ursache: `project_name` wird aus `date.today()` berechnet — kein persistenter Pfad zwischen Runs.
+Ursache: `project_dir`-Fallback in `generate_images()` wurde bei *jedem* Aufruf neu aus dem aktuellen Datum berechnet statt einmalig bestimmt und vom Caller zwischen Start und Resume persistiert.
 
-Datei: `modules/machine.py`, Zeilen 109–113
+Fix: Berechnung in `machine.resolve_project_dir(output_dir, topic)` gekapselt. `ui/machine_tab.py:_start()` ruft das jetzt nur auf, wenn `self._project_dir is None` ist, und speichert das Ergebnis dauerhaft in `self._project_dir` — Resume verwendet danach denselben Ordner, unabhängig vom Datum.
 
-Workaround: Keiner. Generierungen möglichst nicht über Mitternacht lassen.
+Datei: `modules/machine.py` (neue Funktion `resolve_project_dir`, ersetzt Inline-Berechnung ca. Zeile 96–133), `ui/machine_tab.py:_start()`
+
+Beweis: Repro-Test simuliert `date.today()` = 31.07.2026 dann 01.08.2026 — `resolve_project_dir()` liefert ohne Persistierung zwei unterschiedliche Pfade (Baseline-Bug bestätigt); mit der neuen Persistenz-Logik in `_start()` wird die Funktion bei Resume gar nicht erneut aufgerufen, der ursprüngliche Ordner bleibt maßgeblich.
 
 ---
+
+## Offen
 
 ### BUG-004 · OFFEN
 **Progress-Counter startet bei Resume immer bei 0**
