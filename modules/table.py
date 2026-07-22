@@ -111,13 +111,12 @@ def _auto_tags(hook: str, titel: str, topic: str) -> list[str]:
 
 
 def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config: dict | None = None) -> None:
+    import hashlib as _hashlib
     import json as _json
-    from datetime import date as _date
 
     df = df.copy()
     count = len(df)
     topic_disp = topic.strip() or "ShortFlow"
-    today = _date.today().strftime("%d.%m.%Y")
 
     musik_enabled = bool(music_config and music_config.get("enabled"))
     _musik_map: dict[str, str] = {}
@@ -362,7 +361,8 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         f'</div>'
     )
 
-    _sf_pfx_js = _json.dumps("sf_" + topic_disp.replace(" ", "_") + "_" + today + "_")
+    _project_id = _hashlib.sha256(str(Path(path).resolve()).encode("utf-8")).hexdigest()[:16]
+    _sf_pfx_js = _json.dumps(f"sf_{_project_id}_")
     _SCRIPT = (
         f'const rows={rows_js};\n'
         f'var _sfPfx={_sf_pfx_js};\n'
