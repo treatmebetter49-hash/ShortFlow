@@ -120,15 +120,23 @@ Beweis: Repro-Test simuliert `date.today()` = 31.07.2026 dann 01.08.2026 — `re
 
 ---
 
-## Offen
+## Geprüft — nicht reproduzierbar
 
-### BUG-004 · OFFEN
+### BUG-004 · GEPRÜFT — NICHT REPRODUZIERBAR · 2026-07-22
 **Progress-Counter startet bei Resume immer bei 0**
 
-Beschreibung: Beim Fortsetzen beginnt die Fortschrittsanzeige bei 0 %, auch wenn bereits 8 von 10 Shorts fertig sind. Springt erst dann, wenn im aktuellen Run ein Short abgeschlossen wird.
+Ursprüngliche Beschreibung: Beim Fortsetzen beginnt die Fortschrittsanzeige bei 0 %, auch wenn bereits 8 von 10 Shorts fertig sind. Springt erst dann, wenn im aktuellen Run ein Short abgeschlossen wird.
 
-Ursache: `counter = [0]` in `_start()` wird bei jedem Aufruf neu initialisiert, bereits abgeschlossene Shorts aus vorherigen Runs werden nicht gezählt.
+Codex-Analyse (2026-07-22): `counter = [0]` wird in `_start()` zwar bei jedem Aufruf neu initialisiert, aber `modules/machine.py` sendet die `✓ Fertig`-Message pro Zeile unabhängig davon, ob Bilder neu generiert oder nur per `[SKIP]` übersprungen wurden (bereits vorhandene PNGs) — und das noch vor dem optionalen TTS-Block. Beim Resume laufen bereits fertige Shorts dadurch in Sekundenschnelle durch und zählen den Counter hoch; der Balken springt schnell auf den korrekten Stand (z. B. 80 % bei 8/10), bleibt aber nicht bis zum ersten neuen Short bei 0 %.
 
-Datei: `ui/machine_tab.py`, Zeilen 120–127
+Es gibt nur einen sehr kurzen visuellen Zwischenmoment bei 0 %, während Skip-Logs und Tk-`after()`-Callbacks abgearbeitet werden. Ein Vorab-Scan (Counter beim Start auf bereits fertige Shorts vorinitialisieren) würde nur diesen kurzen Übergang entfernen, dupliziert dafür bestehende Validierungslogik aus `machine.py` — kein Fix umgesetzt, da kein spürbarer Nutzwert.
 
-Auswirkung: Nur visuell — keine funktionale Beeinträchtigung.
+Datei: `ui/machine_tab.py`, Zeile ~126–136; `modules/machine.py`, Zeile ~207
+
+---
+
+## Offen
+
+Aktuell keine offenen Bugs.
+
+Aktuell keine offenen Bugs.
