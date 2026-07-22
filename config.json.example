@@ -1,0 +1,20 @@
+{
+  "provider": "openai",
+  "openai_key": "",
+  "gemini_key": "",
+  "fal_key": "",
+  "elevenlabs_key": "",
+  "output_dir": "",
+  "netlify_token": "",
+  "netlify_site_id": "",
+  "telegram_bot_token": "",
+  "telegram_chat_id": "",
+  "first_run_music_setup_done": false,
+  "music_mapping_enabled": false,
+  "music_tracks": [
+    { "label": "Aggressiv / Phonk",     "energie": "phonk",  "track": "" },
+    { "label": "Action / Dringend",      "energie": "action", "track": "" },
+    { "label": "Wissen / Ruhig",         "energie": "wissen", "track": "" },
+    { "label": "Clever / Überraschend",  "energie": "clever", "track": "" }
+  ]
+}
