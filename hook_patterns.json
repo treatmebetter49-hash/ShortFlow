@@ -126,7 +126,9 @@
       {"text": "Pass auf, dieser Trick funktioniert auch bei dir.", "rhythm": "sehr_kurz", "energy": "hoch", "opening": "verb"},
       {"text": "Diese Technik wird komplett unterschätzt.", "rhythm": "sehr_kurz", "energy": "hoch", "opening": "demonstrativ"},
       {"text": "Dein Bauchgefühl täuscht dich öfter, als du denkst.", "rhythm": "kurz", "energy": "hoch", "opening": "possessivpronomen"},
-      {"text": "Fast jeder überschätzt seine eigene Rationalität.", "rhythm": "kurz", "energy": "hoch", "opening": "adverb"}
+      {"text": "Fast jeder überschätzt seine eigene Rationalität.", "rhythm": "kurz", "energy": "hoch", "opening": "adverb"},
+      {"text": "Dein erster Eindruck entscheidet alles, bevor du ein Wort sagst.", "rhythm": "mittel", "energy": "hoch", "opening": "possessivpronomen"},
+      {"text": "Wer das kennt, hat in jedem Gespräch die Oberhand.", "rhythm": "kurz", "energy": "hoch", "opening": "relativ"}
     ]
   }
 }
