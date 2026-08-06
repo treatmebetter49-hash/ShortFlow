@@ -1,4 +1,5 @@
 import json
+import random
 import re
 from datetime import date, timedelta
 from pathlib import Path
@@ -25,14 +26,21 @@ _SYSTEM = (
     "Erstelle für jeden Short genau 5 Hook-Varianten im Feld 'hook_variants' (Array mit 5 Strings). "
     "Maximal 70 Zeichen pro Hook. Keine Fragen. Keine 'Was wäre wenn'-Formulierungen. "
     "Kein 'Stell dir vor'-Stil. Direkte Aussage, harte Neugier, sofortige Spannung.\n"
-    "HOOK-FORMEL (Pflicht): Die 5 Varianten müssen diese Typen abdecken:\n"
-    "- Mindestens 2x WIDERSPRUCHS-HOOK: Aussage die der Leser sofort anzweifelt. "
-    "Beispiele: 'Dein Gehirn spürt keinen Schmerz.' · 'Du schläfst nie wirklich ein.' · 'Dein bester Freund lügt dich an.'\n"
-    "- Mindestens 1x OPINION-HOOK: Kontroverse oder unbequeme Wahrheit. "
-    "Beispiele: 'Niemand will's hören – aber [WAHRHEIT].' · 'Alle machen bei [THEMA] denselben Fehler.' · 'Du bist nicht faul – du wurdest schlecht beraten.'\n"
-    "- Mindestens 1x STORY-HOOK: Persönlich, emotional, authentisch. "
-    "Beispiele: 'Ein Satz hat mein Denken über [THEMA] verändert.' · 'Ich dachte, ich mache alles richtig – bis das passiert ist.' · 'Keiner redet über die Schattenseite.'\n"
-    "VERBOTEN für alle 5 Varianten: philosophische Aussagen, 'X der Y'-Konstrukte, abstrakte Begriffe ohne konkreten Bezug.\n"
+    "ABSOLUT VERBOTEN als Hook-Einstiegswort: 'Warum', 'Wieso', 'Weshalb', 'Was ist', 'Wie kann', 'Wie wird'. "
+    "Jeder Hook ist eine direkte Behauptung — kein einziger Hook ist eine Frage.\n"
+    "WICHTIG — Der Hook wird GESPROCHEN (Voiceover, erster Satz). "
+    "Er muss natürlich klingen wenn man ihn laut liest. "
+    "VERBOTEN: Doppelpunkt, Gedankenstrich als Trenner, Titelstil ('X: Warum Y'). "
+    "Jeder Hook ist ein vollständiger gesprochener Satz ohne Satzzeichen-Tricks.\n"
+    "HOOK-FORMEL: Der Ton der Varianten folgt dem Energie-Typ des Shorts (steht im User-Prompt):\n"
+    "  phonk-Hooks: aggressiv, anklagend, dunkel. Klingen wie eine Enthüllung die wehtut.\n"
+    "    Beispiele: 'Du lügst dir selbst ins Gesicht.' · 'Dein Gehirn sabotiert dich täglich.' · 'Niemand will's hören – aber du bist leicht zu manipulieren.'\n"
+    "  action-Hooks: dringend, alarmierend, Handlungsdruck. Der Leser muss sofort wissen was er falsch macht.\n"
+    "    Beispiele: 'Hör sofort damit auf.' · 'Das zerstört gerade deine Konzentration.' · 'Du verlierst täglich 2 Stunden – und weißt es nicht.'\n"
+    "  wissen-Hooks: staunend, lehrreich, Neugier wecken. Klingen wie ein erstaunlicher Fund.\n"
+    "    Beispiele: 'Dein Gehirn macht das automatisch.' · 'Das nennt sich Zeigarnik-Effekt.' · 'Forscher haben herausgefunden: du erinnerst dich falsch.'\n"
+    "  clever-Hooks: Twist, Widerspruch, unerwartete Pointe. Der Leser denkt erst A, dann kommt B.\n"
+    "    Beispiele: 'Du glaubst, du entscheidest frei. Falsch.' · 'Je mehr du weißt, desto weniger weißt du.' · 'Dein bester Freund lügt dich an – und das ist gut so.'\n"
     "Die 5 Varianten nutzen verschiedene Einstiegswörter — nie dasselbe Startwort zweimal.\n\n"
 
     "TITEL (YouTube-Upload-Titel):\n"
@@ -117,13 +125,14 @@ _SYSTEM = (
     "mixed genres, AI-artifact glow, Keyword-Listen ohne Szenenkontext.\n"
     "Kein Präfix, keine Nummerierung in den Prompts.\n\n"
 
-    "ENERGIE-TYP:\n"
-    "Wähle für jeden Short einen Energie-Typ aus vier Optionen: phonk | action | wissen | clever.\n"
-    "phonk = aggressiv, dunkel, konfrontativ. "
-    "action = dringend, spannend, bewegend. "
-    "wissen = ruhig, lehrreich, reflektiert. "
-    "clever = überraschend, witzig, doppeldeutig.\n"
-    "Füge das Feld 'energie_typ' in jedes Short-Objekt ein.\n\n"
+    "ENERGIE-TYP (nur für Hook-Ton):\n"
+    "Jeder Short hat im User-Prompt einen vorgegebenen Energie-Typ. "
+    "Schreibe Hook und Text im Ton dieses Typs:\n"
+    "  phonk   = provokativ, dunkel, konfrontativ.\n"
+    "  action  = dringend, alarmierend, Handlungsbedarf.\n"
+    "  wissen  = ruhig, lehrreich, staunend.\n"
+    "  clever  = Twist, überraschend, doppeldeutig.\n"
+    "Das Feld 'energie_typ' im JSON muss weggelassen werden — wird von Python gesetzt.\n\n"
 
     "EINZIGARTIGKEIT — ABSOLUT PFLICHT:\n"
     "Jeder Short in diesem Batch behandelt ein ANDERES psychologisches Phänomen, einen anderen Bias oder Effekt. "
@@ -140,7 +149,7 @@ _SYSTEM = (
     "Format:\n"
     '{{"shorts": [{{"short": "Short01", "hook_variants": ["...", "...", "...", "...", "..."], "text": "...", '
     '"titel": "...", "yt_beschreibung": "...", "ig_beschreibung": "...", '
-    '"prompts": ["...", ...(exakt 10)], "energie_typ": "phonk"}}]}}\n'
+    '"prompts": ["...", ...(exakt 10)]}}]}}\n'
 )
 
 _PROMPT_SHORTEN = (
@@ -349,7 +358,7 @@ _SYSTEM_DEDUP = (
     "\"hook\": \"...\", "
     "\"text\": \"...\", "
     "\"titel\": \"...\", "
-    "\"energie_typ\": \"wissen\"}}]}}\n\n"
+    "}}]}}\n\n"
     "Regeln: Hook max 70 Zeichen, direkte Aussage. "
     "Titel MUSS Neugierlücke/Konsequenz enthalten, KEINE reine Fachbegriff-Nennung "
     "(verboten: 'Der/Die/Das [Fachbegriff]' allein, z.B. 'Der Halo-Effekt'). "
@@ -405,7 +414,19 @@ def _regenerate_single(
             if _titel_conflicts(neuer_titel):
                 print(f"[DEDUP] Versuch {attempt+1}: '{neuer_titel}' kollidiert noch — retry")
                 continue
-            hook = s.get("hook") or (s.get("hook_variants", [""])[0] if s.get("hook_variants") else "")
+            variants = s.get("hook_variants") or []
+            clean_variants = [h for h in variants if h and _hook_is_clean(str(h))]
+            raw_hook = s.get("hook", "")
+            if clean_variants:
+                hook = clean_variants[0]
+            elif raw_hook and _hook_is_clean(raw_hook):
+                hook = raw_hook
+            elif variants:
+                hook = str(variants[0])
+            else:
+                hook = raw_hook
+            if not _hook_is_clean(hook):
+                hook = _make_fallback_hook(s)
             new_row = row.copy()
             new_row["Hook"] = hook
             new_row["Text"] = s.get("text", row["Text"])
@@ -613,6 +634,7 @@ def generate_table(
     start_num: int = 1,
     existing_hooks: list[str] | None = None,
 ) -> pd.DataFrame:
+    _hook_log.clear()
     provider = provider if provider in _PROVIDER_CONFIG else "openai"
     pconf = _PROVIDER_CONFIG[provider]
     if not openai_key:
@@ -694,11 +716,31 @@ def generate_table(
     return merged
 
 
+def _assign_energie_typen(count: int) -> list[str]:
+    """Gleichmäßig verteilte, gemischte Liste mit den 4 Energie-Typen."""
+    _TYPES = ["phonk", "action", "wissen", "clever"]
+    base = [_TYPES[i % 4] for i in range(count)]
+    random.shuffle(base)
+    return base
+
+
 def _fetch_batch(client: OpenAI, topic: str, count: int, pattern_str: str, model: str = "gpt-4o", used_hooks: list[str] | None = None, concepts: list[str] | None = None, used_titels: list[str] | None = None) -> pd.DataFrame:
-    user_msg = f"Erstelle {count} Shorts zum Thema: {topic}"
+    energie_typen = _assign_energie_typen(count)
+    user_msg = (
+        f"Erstelle {count} Shorts zum Thema: {topic}\n\n"
+        "HOOK-PFLICHTREGELN — kein einziger Hook darf dagegen verstoßen:\n"
+        "1. KEIN Hook darf mit 'Warum' beginnen. Nicht 'Warum du...', nicht 'Warum ist...', nicht 'Warum kann...'. Komplett verboten.\n"
+        "2. KEINE Fragen. Jeder Hook ist eine direkte Aussage oder Behauptung.\n"
+        "3. KEIN 'Wieso', 'Weshalb', 'Was ist', 'Wie kann' als Einstieg.\n"
+        "4. Jeder Hook beginnt mit einem anderen Wort — nie dasselbe Startwort zweimal.\n"
+        "5. Ton folgt dem Energie-Typ: phonk=anklagend, action=alarmierend, wissen=staunend, clever=Twist."
+    )
     if concepts:
-        concepts_list = "\n".join(f"- {c}" for c in concepts)
-        user_msg += f"\n\nVerpflichtend: Behandle genau diese {len(concepts)} Konzepte (je eines pro Short):\n{concepts_list}"
+        concepts_list = "\n".join(f"{i+1}. Konzept: {c}  |  Energie-Typ: {energie_typen[i]}" for i, c in enumerate(concepts))
+        user_msg += f"\n\nVerpflichtend: Behandle genau diese {len(concepts)} Konzepte (je eines pro Short, Reihenfolge einhalten):\n{concepts_list}"
+    else:
+        typen_list = "\n".join(f"Short {i+1}: Energie-Typ = {t}" for i, t in enumerate(energie_typen))
+        user_msg += f"\n\nVorgegebene Energie-Typen (PFLICHT, nicht ändern):\n{typen_list}"
     if used_titels:
         titels_list = "\n".join(f"- {t}" for t in used_titels)
         user_msg += f"\n\nBereits verwendete Titel/Konzepte (NICHT wiederholen, kein ähnliches Thema):\n{titels_list}"
@@ -734,7 +776,7 @@ def _fetch_batch(client: OpenAI, topic: str, count: int, pattern_str: str, model
             f"Kein gültiges JSON erhalten.\n\nFehler: {exc}\n\nAntwort:\n{raw[:500]}"
         ) from None
 
-    return _to_dataframe(data, count, raw, client, model)
+    return _to_dataframe(data, count, raw, client, model, energie_typen)
 
 
 def _extract_shorts_list(data: dict | list, raw: str) -> list:
@@ -764,7 +806,71 @@ def _extract_shorts_list(data: dict | list, raw: str) -> list:
     )
 
 
-def _to_dataframe(data: dict | list, expected: int, raw: str, client: OpenAI, model: str = "gpt-4o-mini") -> pd.DataFrame:
+_HOOK_FORBIDDEN_START = ("warum", "wieso", "weshalb", "was ist", "wie kann", "wie wird", "wie ist")
+
+
+def _make_fallback_hook(s: dict) -> str:
+    """Garantiert sauberer Hook aus Text — kein GPT, kein Fragezeichen, kein Warum."""
+    text = str(s.get("text", "")).strip()
+    # Alle Sätze aus dem Text durchgehen, ersten sauberen nehmen
+    for sentence in re.split(r'(?<=[.!])\s+', text):
+        sentence = sentence.strip()
+        if sentence and len(sentence) <= 70 and _hook_is_clean(sentence):
+            return sentence
+    # Absoluter Fallback
+    return "Dein Gehirn macht das — ohne dass du es merkst."
+
+
+def _hook_is_clean(hook: str) -> bool:
+    h = hook.strip().lower()
+    if h.endswith("?"):
+        return False
+    for word in _HOOK_FORBIDDEN_START:
+        if h.startswith(word):
+            return False
+    return True
+
+
+def _filter_hooks(variants: list[str], short_id: str) -> list[str]:
+    clean = [h for h in variants if _hook_is_clean(h)]
+    removed = len(variants) - len(clean)
+    if removed:
+        print(f"[HOOK FILTER] {short_id}: {removed} verbotene Hook(s) entfernt, {len(clean)} verbleiben")
+    return clean
+
+
+def _fetch_clean_hook_variants(client: OpenAI, model: str, topic: str, s: dict, short_id: str, bad_hooks: list[str]) -> list[str]:
+    titel = str(s.get("titel", ""))
+    text = str(s.get("text", ""))
+    bad_list = "\n".join(f"- {h}" for h in bad_hooks)
+    prompt = (
+        f"Thema: {topic}\nTitel: {titel}\nText: {text}\n\n"
+        f"Diese Hooks sind VERBOTEN (beginnen mit Warum/Wieso/Frage): \n{bad_list}\n\n"
+        "Erstelle 5 neue Hook-Varianten. PFLICHT:\n"
+        "- Kein Hook beginnt mit: Warum, Wieso, Weshalb, Was ist, Wie kann, Wie wird\n"
+        "- Kein Hook endet mit Fragezeichen\n"
+        "- Direkte Behauptung, max 70 Zeichen\n"
+        "Antworte NUR mit JSON: {\"hook_variants\": [\"...\", \"...\", \"...\", \"...\", \"...\"]}"
+    )
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.9,
+            max_tokens=512,
+            timeout=30,
+        )
+        data = json.loads(resp.choices[0].message.content)
+        variants = [str(h) for h in data.get("hook_variants", []) if h]
+        clean = _filter_hooks(variants, short_id)
+        return clean if clean else variants
+    except Exception as exc:
+        print(f"[HOOK FILTER] {short_id}: Retry fehlgeschlagen: {exc}")
+        return bad_hooks
+
+
+def _to_dataframe(data: dict | list, expected: int, raw: str, client: OpenAI, model: str = "gpt-4o-mini", energie_typen: list[str] | None = None) -> pd.DataFrame:
     shorts = _extract_shorts_list(data, raw)
 
     if len(shorts) == 0:
@@ -799,13 +905,22 @@ def _to_dataframe(data: dict | list, expected: int, raw: str, client: OpenAI, mo
 
         short_id = str(s["short"]).strip() or f"Short{i:02d}"
         if "hook_variants" in s and isinstance(s.get("hook_variants"), list) and s["hook_variants"]:
-            hook = hook_engine.select_best_hook(
-                [str(h) for h in s["hook_variants"] if h],
-                hook_engine.get_recent_hooks(),
-            )
+            raw_variants = [str(h) for h in s["hook_variants"] if h]
+            clean_variants = _filter_hooks(raw_variants, short_id)
+            _hook_log.append(f"{short_id}: raw={len(raw_variants)} clean={len(clean_variants)} raw_hooks={raw_variants}")
+            if not clean_variants:
+                print(f"[HOOK FILTER] {short_id}: keine sauberen Varianten — nutze Text als Basis")
+                clean_variants = [_make_fallback_hook(s)]
+            hook = hook_engine.select_best_hook(clean_variants, hook_engine.get_recent_hooks())
         else:
             print(f"[HOOK FALLBACK] {short_id}: 'hook_variants' fehlt, nutze 'hook'")
             hook = str(s.get("hook", ""))
+        # Finale Prüfung — wenn immer noch verboten, Fallback ohne GPT
+        if not _hook_is_clean(hook):
+            print(f"[HOOK FILTER] {short_id}: Hook verboten → Fallback")
+            _hook_log.append(f"{short_id}: FINALE PRÜFUNG VERBOTEN: '{hook}'")
+            hook = _make_fallback_hook(s)
+        _hook_log.append(f"{short_id}: FINAL_HOOK='{hook}' clean={_hook_is_clean(hook)}")
         hook_engine.update_session_cache(hook)
 
         if len(hook) > _HOOK_MAX:
@@ -819,9 +934,14 @@ def _to_dataframe(data: dict | list, expected: int, raw: str, client: OpenAI, mo
             text = _mechanical_trim(hook, text)
             print(f"[HARD CAP] {short_id}: {total_final} → {len(hook) + len(text)} Zeichen erzwungen")
 
-        energie_typ = str(s.get("energie_typ", "")).strip().lower()
-        if energie_typ not in ("phonk", "action", "wissen", "clever"):
-            energie_typ = "wissen"
+        # Energie-Typ kommt aus Python-Vorgabe, nicht von GPT
+        _VALID_TYPEN = ("phonk", "action", "wissen", "clever")
+        if energie_typen and (i - 1) < len(energie_typen):
+            energie_typ = energie_typen[i - 1]
+        else:
+            gpt_typ = str(s.get("energie_typ", "")).strip().lower()
+            energie_typ = gpt_typ if gpt_typ in _VALID_TYPEN else "wissen"
+        print(f"[ENERGIE] {short_id}: {energie_typ}")
 
         rows.append({
             "Short": short_id,
@@ -837,8 +957,19 @@ def _to_dataframe(data: dict | list, expected: int, raw: str, client: OpenAI, mo
             "EnergiTyp": energie_typ,
         })
 
-    return pd.DataFrame(rows, columns=COLUMNS)
+    df = pd.DataFrame(rows, columns=COLUMNS)
+    # Hook-Filter-Log auf Desktop schreiben
+    try:
+        log_path = Path.home() / "Desktop" / "shortflow_hook_log.txt"
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(_hook_log))
+        print(f"[HOOK LOG] Geschrieben: {log_path}")
+    except Exception as exc:
+        print(f"[HOOK LOG] Fehler: {exc}")
+    return df
 
+
+_hook_log: list[str] = []
 
 _MONTHS_DE = [
     "Januar", "Februar", "März", "April", "Mai", "Juni",
