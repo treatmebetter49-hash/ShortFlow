@@ -162,11 +162,18 @@ def generate_images(
             progress_cb(f"  [WARN] Keine Prompts gefunden — Bilder übersprungen")
         else:
             prompts_txt = folder / "prompts.txt"
-            if not prompts_txt.exists():
-                prompts_txt.write_text(
-                    "\n".join(f"{i}. {p}" for i, p in enumerate(prompts[:10], 1)),
-                    encoding="utf-8",
-                )
+            new_prompts_content = "\n".join(f"{i}. {p}" for i, p in enumerate(prompts[:10], 1))
+            prompts_changed = (
+                not prompts_txt.exists()
+                or prompts_txt.read_text(encoding="utf-8").strip() != new_prompts_content.strip()
+            )
+            if prompts_changed:
+                prompts_txt.write_text(new_prompts_content, encoding="utf-8")
+                # Alte Bilder löschen damit sie mit den neuen Prompts neu generiert werden
+                deleted = list(folder.glob("Bild*.png"))
+                for old_bild in deleted:
+                    old_bild.unlink()
+                progress_cb(f"  [RESET] Prompts geändert — {len(deleted)} alte Bilder gelöscht, werden neu generiert")
 
             is_real = not USE_MOCK_IMAGE_API
             prompt_list = prompts[:10]
