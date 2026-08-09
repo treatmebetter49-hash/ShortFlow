@@ -299,7 +299,7 @@ class BrainTab(ctk.CTkFrame):
         try:
             base_path = self._project_dir / f"{self._file_stem}.html"
             html_path = base_path
-            table.append_to_html(df, html_path, topic=topic, music_config=self._music_config())
+            table.save_html(df, html_path, topic=topic, music_config=self._music_config())
             table.save_prompts_json(df, self._project_dir / ".prompts.json")
             errors = table.validate_html(html_path)
             if errors:
