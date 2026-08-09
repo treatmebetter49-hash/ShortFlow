@@ -3,7 +3,7 @@ from pathlib import Path
 import requests
 
 _VOICE_ID = "5KvpaGteYkNayiswuX2h"  # Wayne Steele
-_MODEL = "eleven_multilingual_v2"
+_MODEL = "eleven_turbo_v2_5"
 _API_URL = f"https://api.elevenlabs.io/v1/text-to-speech/{_VOICE_ID}"
 
 
@@ -23,8 +23,10 @@ def generate_voiceover(text: str, output_path: Path, api_key: str) -> None:
             "text": text,
             "model_id": _MODEL,
             "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.75,
+                "stability": 0.75,
+                "similarity_boost": 0.51,
+                "style": 0.76,
+                "speed": 1.15,
             },
         },
         timeout=60,
