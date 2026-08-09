@@ -26,8 +26,8 @@ def generate_voiceover(text: str, output_path: Path, api_key: str) -> None:
                 "stability": 0.75,
                 "similarity_boost": 0.51,
                 "style": 0.76,
-                "speed": 1.15,
             },
+            "speed": 1.15,
         },
         timeout=60,
     )
