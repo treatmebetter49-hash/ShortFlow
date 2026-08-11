@@ -45,6 +45,9 @@ Hier wird der Content erstellt.
 - 10 Bildprompts pro Short als filmisches Storyboard
 - Energie-Typ (phonk / action / wissen / clever)
 
+### Dedup — Keine doppelten Themen
+ShortFlow erkennt automatisch ob ein neu generierter Short inhaltlich zu ähnlich zu einem bereits vorhandenen ist (gleicher Hook-Typ, ähnlicher Titel oder Text). Wird ein Duplikat erkannt, wird dieser Short still neu generiert — ohne Unterbrechung. Das passiert im Hintergrund und braucht keine Aktion.
+
 ### Nach der Generierung:
 - **Tabelle öffnen** — öffnet die HTML-Tabelle im Browser
 - **→ WEITER ZU MACHINE** — wechselt zum Machine Tab
@@ -136,5 +139,16 @@ Premiere Pro → Bilder importieren + MP3 als Voiceover
 |--------|--------|
 | `API Key ungültig` | Key in Settings prüfen und neu speichern |
 | `Guthaben leer` | FAL- oder ElevenLabs-Konto aufladen, dann FORTSETZEN |
-| App startet nicht | Rechtsklick auf ShortFlow.app → Öffnen |
+| App startet nicht (Mac) | Rechtsklick auf ShortFlow.app → Öffnen |
+| App startet nicht (Windows) | Rechtsklick auf ShortFlow.exe → Eigenschaften → „Zulassen" anklicken → OK |
+| Windows Defender Warnung | „Weitere Informationen" → „Trotzdem ausführen" klicken |
 | Tabelle hängt | App neu starten, CSV laden, FORTSETZEN |
+
+## 9. Hinweise für Windows-User
+
+ShortFlow läuft unter Windows 10 und 11. Wichtige Unterschiede zur Mac-Version:
+
+- **Output-Ordner:** Windows-Pfad eingeben, z.B. `C:\Users\DeinName\Downloads\Shorts`
+- **Beim ersten Start:** Windows Defender SmartScreen zeigt möglicherweise eine Warnung — das ist normal bei Apps ohne Signatur. „Weitere Informationen" → „Trotzdem ausführen" klicken.
+- **App nicht sichtbar nach Start:** Manchmal startet die App hinter anderen Fenstern. Alt+Tab drücken um zu wechseln.
+- **Schriftarten:** Die App verwendet Systemschriften — das Erscheinungsbild kann leicht von der Mac-Version abweichen.
