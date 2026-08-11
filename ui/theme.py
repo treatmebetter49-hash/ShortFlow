@@ -25,10 +25,11 @@ INK_ON_GOLD = "#1c1408"    # dark text for solid-gold surfaces
 SILVER = "#9a9aa4"
 SILVER_HOVER = "#84848f"
 
-# CTkButton "glass" look: dark warm-black fill, gold border, gold text.
-# Used via **theme.GLASS on every secondary button across the app.
+# CTkButton "glass" look: flat outline chip (fill matches the panel behind
+# it), gold border, gold text. Used via **theme.GLASS on every secondary
+# button across the app.
 GLASS = dict(
-    fg_color="#181410",
+    fg_color="transparent",
     hover_color="#241d15",
     border_color=GOLD,
     border_width=1,

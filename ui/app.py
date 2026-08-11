@@ -23,7 +23,7 @@ class App(ctk.CTk):
         ctk.set_default_color_theme("blue")
         # Gold-Akzent direkt überschreiben (Werte zentral in ui/theme.py)
         from customtkinter.windows.widgets.theme import ThemeManager
-        ThemeManager.theme["CTkButton"]["fg_color"]       = [theme.GLASS["fg_color"], theme.GLASS["fg_color"]]
+        ThemeManager.theme["CTkButton"]["fg_color"]       = theme.GLASS["fg_color"]
         ThemeManager.theme["CTkButton"]["hover_color"]    = [theme.GLASS["hover_color"], theme.GLASS["hover_color"]]
         ThemeManager.theme["CTkButton"]["border_color"]   = [theme.GOLD, theme.GOLD]
         ThemeManager.theme["CTkButton"]["border_width"]   = 1
@@ -33,7 +33,9 @@ class App(ctk.CTk):
             ThemeManager.theme[key]["fg_color"] = [theme.GOLD, theme.GOLD]
             ThemeManager.theme[key]["hover_color"] = [theme.GOLD_HOVER, theme.GOLD_HOVER]
         ThemeManager.theme["CTkSwitch"]["progress_color"] = [theme.GOLD, theme.GOLD]
-        ThemeManager.theme["CTkOptionMenu"]["fg_color"]              = [theme.GLASS["fg_color"], theme.GLASS["fg_color"]]
+        # CTkOptionMenu unterstützt fg_color="transparent" nicht (kein Sonderfall
+        # in ctk_optionmenu.py._draw() wie bei CTkButton) -> feste Panel-Fläche.
+        ThemeManager.theme["CTkOptionMenu"]["fg_color"]              = [theme.SURFACE, theme.SURFACE]
         ThemeManager.theme["CTkOptionMenu"]["button_color"]          = [theme.GLASS["hover_color"], theme.GLASS["hover_color"]]
         ThemeManager.theme["CTkOptionMenu"]["button_hover_color"]    = [theme.GLASS["hover_color"], theme.GLASS["hover_color"]]
         ThemeManager.theme["CTkOptionMenu"]["text_color"]            = [theme.GOLD_HI, theme.GOLD_HI]
