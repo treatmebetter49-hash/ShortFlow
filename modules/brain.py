@@ -18,9 +18,29 @@ _LEN_MIN = 250    # Hook + Text Minimum
 _LEN_MAX = 270    # Hook + Text Maximum
 _LEN_TARGET = 260 # Ziel-Mitte für Kürzen/Erweitern
 
+def _topic_rules(topic: str) -> str:
+    t = topic.lower()
+    if "biolog" in t:
+        return (
+            "THEMA-REGEL — BIOLOGIE:\n"
+            "Biologie = naturwissenschaftliche Fakten über Lebewesen, Körper, Evolution, Natur, Zellen, Gene, Ökosysteme.\n"
+            "VERBOTEN: Verhalten, Emotionen, Denkmuster, Manipulation, soziale Dynamiken — das ist Psychologie.\n"
+            "RICHTIG: Wie Photosynthese funktioniert. Warum Schlaf die Zellen repariert. Was im Körper beim Sport passiert.\n"
+            "FALSCH: 'Du fühlst dich ausgelaugt' / 'Dein Körper sehnt sich nach Freiheit' — das ist Psychologie, nicht Biologie.\n\n"
+        )
+    if "psycholog" in t:
+        return (
+            "THEMA-REGEL — PSYCHOLOGIE:\n"
+            "Psychologie = menschliches Verhalten, Denkmuster, Emotionen, Wahrnehmung, soziale Dynamiken, kognitive Verzerrungen.\n"
+            "VERBOTEN: rein naturwissenschaftliche Biologie (Zellen, Gene, Photosynthese) — das ist Biologie.\n\n"
+        )
+    return ""
+
+
 _SYSTEM = (
     "Du bist ein TikTok/Reels-Voiceover-Autor. "
     "Erstelle {count} Shorts zum Thema '{topic}'.\n\n"
+    "{topic_rules}"
 
     "HOOK-VARIANTEN:\n"
     "Erstelle für jeden Short genau 5 Hook-Varianten im Feld 'hook_variants' (Array mit 5 Strings). "
@@ -144,9 +164,9 @@ _SYSTEM = (
     "Das Feld 'energie_typ' im JSON muss weggelassen werden — wird von Python gesetzt.\n\n"
 
     "EINZIGARTIGKEIT — ABSOLUT PFLICHT:\n"
-    "Jeder Short in diesem Batch behandelt ein ANDERES psychologisches Phänomen, einen anderen Bias oder Effekt. "
+    "Jeder Short in diesem Batch behandelt ein ANDERES Konzept oder Phänomen zum Thema '{topic}'. "
     "Kein Konzept darf zweimal vorkommen — auch nicht anders formuliert oder aus einem anderen Blickwinkel. "
-    "Spotlight-Effekt = Spotlight-Effekt, egal ob du schreibst 'Niemand schaut hin' oder 'Du stehst nicht im Mittelpunkt'.\n\n"
+    "Beispiel: 'Photosynthese' = 'Photosynthese', egal ob du schreibst 'Pflanzen fangen Licht ein' oder 'Blätter wandeln Sonne in Energie um'.\n\n"
 
     "BESCHREIBUNGEN:\n"
     "Erstelle für jeden Short zwei separate Beschreibungen:\n"
@@ -293,9 +313,14 @@ def _validate_df(df: pd.DataFrame, expected: int) -> list[str]:
 
 
 def _generate_concepts(topic: str, count: int, client: OpenAI, model: str) -> list[str]:
+    if "psycholog" in topic.lower():
+        concept_art = "einzigartige psychologische Phänomene, Biases oder Effekte"
+    else:
+        concept_art = f"einzigartige, klar unterscheidbare Konzepte oder Aspekte zum Thema '{topic}'"
     prompt = (
-        f"Generiere genau {count} einzigartige psychologische Phänomene, Biases oder Effekte "
+        f"Generiere genau {count} {concept_art} "
         f"für TikTok-Shorts zum Thema '{topic}'.\n"
+        f"Jedes Konzept muss eindeutig zum Thema '{topic}' gehören — keine fachfremden Themen. "
         f"Kein Konzept darf sich mit einem anderen überschneiden. "
         f"Antworte NUR mit einem JSON-Objekt: {{\"konzepte\": [\"Name1\", \"Name2\", ...]}}"
     )
@@ -386,7 +411,7 @@ def _regenerate_single(
     user_msg = (
         f"Erstelle 1 Short zum Thema: {topic}\n\n"
         f"VERBOTEN: Der Titel '{dupe_titel}' ist bereits vergeben. "
-        f"Wähle ein völlig anderes Konzept aus einem anderen Bereich der Psychologie.\n\n"
+        f"Wähle ein völlig anderes Konzept aus einem anderen Bereich von {topic}.\n\n"
         f"Bereits verwendete Konzepte/Titel (NICHT wiederholen):\n{used_t}\n\n"
         f"Bereits verwendete Hooks (KEIN ähnliches Konzept):\n{used_h}"
     )
@@ -761,7 +786,7 @@ def _fetch_batch(client: OpenAI, topic: str, count: int, pattern_str: str, model
             model=model,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": _SYSTEM.format(count=count, topic=topic, pattern_examples=pattern_str)},
+                {"role": "system", "content": _SYSTEM.format(count=count, topic=topic, pattern_examples=pattern_str, topic_rules=_topic_rules(topic))},
                 {"role": "user", "content": user_msg},
             ],
             temperature=0.8,
