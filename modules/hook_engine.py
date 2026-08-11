@@ -167,12 +167,31 @@ def score_hook(hook: str, recent_hooks: list[str]) -> tuple[float, list[str]]:
     return max(0.0, score), reasons
 
 
+HOOK_FORBIDDEN_START = ("warum", "wieso", "weshalb", "was ist", "wie kann", "wie wird", "wie ist")
+
+
+def is_clean_hook(hook: str) -> bool:
+    h = hook.strip().lower()
+    if h.endswith("?"):
+        return False
+    for w in HOOK_FORBIDDEN_START:
+        if h.startswith(w):
+            return False
+    return True
+
+
 def select_best_hook(variants: list[str], recent_hooks: list[str]) -> str:
     if not variants:
         raise ValueError("Keine Hook-Varianten übergeben.")
 
+    # Verbotene Hooks rausfiltern bevor Scoring
+    clean = [h for h in variants if is_clean_hook(h)]
+    if not clean:
+        print(f"[HOOK FILTER] Alle Varianten verboten — nehme erste Variante ungefiltert")
+        clean = variants
+
     scored: list[tuple[float, str, list[str]]] = []
-    for hook in variants:
+    for hook in clean:
         s, reasons = score_hook(hook, recent_hooks)
         scored.append((s, hook.strip(), reasons))
         tag = "✓" if s >= 60 else "✗"

@@ -72,6 +72,13 @@ def save_csv(df: pd.DataFrame, path: str | Path) -> None:
     df.to_csv(path, index=False, sep=";", encoding="utf-8-sig")
 
 
+_IG_CTA_VARIANTS = [
+    "Kennst du das von dir selbst? Schreib's in die Kommentare 👇",
+    "Wo hast du das zuletzt bei dir gemerkt?",
+    "Stimmst du zu oder nicht? Kommentier mit Ja oder Nein.",
+]
+
+
 def _auto_tags(hook: str, titel: str, topic: str) -> list[str]:
     _STOP = {
         "der","die","das","ein","eine","einen","einem","einer","ist","sind","hat","haben",
@@ -161,9 +168,10 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
         )
 
     _tbody_rows = []
-    for _r in row_objects:
+    for _i, _r in enumerate(row_objects):
         _tags = _auto_tags(_r['hook'], _r['titel'], topic)
-        _ig_block = _r['titel'] + '\n\n' + _r['ig'] + '\n\n' + ' '.join(_tags)
+        _cta = _IG_CTA_VARIANTS[_i % len(_IG_CTA_VARIANTS)]
+        _ig_block = _r['titel'] + '\n\n' + _r['ig'] + '\n\n' + _cta + '\n\n' + ' '.join(_tags)
         _musik_cell = (
             f'<td class="td-musik">'
             f'<span class="musik-badge musik-{_r["musik"]}">'
@@ -182,7 +190,7 @@ def save_html(df: pd.DataFrame, path: str | Path, topic: str = "", music_config:
             + _cell(_r['text'], 'text-body')
             + _cell(_r['titel'], 'titel-text')
             + _cell(_r['yt'], 'desc-text')
-            + f'<td><div class="desc-text">{_he(_r["ig"])}</div>'
+            + f'<td><div class="desc-text">{_he(_r["ig"] + " " + _cta)}</div>'
             + f'<button class="copy-btn" data-copy="{_copy_attr(_ig_block)}">Kopieren</button></td>'
             + '<td class="td-status">'
             + f'<button class="status-btn pending" data-short="{_he(_r["short"])}">Ausstehend</button>'
@@ -499,7 +507,8 @@ def save_ig_html(df: pd.DataFrame, path: str | Path, topic: str = "") -> None:
         ig = str(row.get("IGBeschreibung", ""))
         hook = str(row.get("Hook", ""))
         tags = _auto_tags(hook, titel, topic)
-        ig_text = titel + '\n' + ig + '\n' + ' '.join(tags)
+        cta = _IG_CTA_VARIANTS[i % len(_IG_CTA_VARIANTS)]
+        ig_text = titel + '\n' + ig + '\n' + cta + '\n' + ' '.join(tags)
         cards_html.append(
             f'<div class="card">'
             f'<div class="card-meta">'

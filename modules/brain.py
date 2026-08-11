@@ -449,17 +449,17 @@ def _regenerate_single(
                 print(f"[DEDUP] Versuch {attempt+1}: '{neuer_titel}' kollidiert noch — retry")
                 continue
             variants = s.get("hook_variants") or []
-            clean_variants = [h for h in variants if h and _hook_is_clean(str(h))]
+            clean_variants = [h for h in variants if h and hook_engine.is_clean_hook(str(h))]
             raw_hook = s.get("hook", "")
             if clean_variants:
                 hook = clean_variants[0]
-            elif raw_hook and _hook_is_clean(raw_hook):
+            elif raw_hook and hook_engine.is_clean_hook(raw_hook):
                 hook = raw_hook
             elif variants:
                 hook = str(variants[0])
             else:
                 hook = raw_hook
-            if not _hook_is_clean(hook):
+            if not hook_engine.is_clean_hook(hook):
                 hook = _make_fallback_hook(s)
             new_row = row.copy()
             new_row["Hook"] = hook
@@ -840,33 +840,20 @@ def _extract_shorts_list(data: dict | list, raw: str) -> list:
     )
 
 
-_HOOK_FORBIDDEN_START = ("warum", "wieso", "weshalb", "was ist", "wie kann", "wie wird", "wie ist")
-
-
 def _make_fallback_hook(s: dict) -> str:
     """Garantiert sauberer Hook aus Text — kein GPT, kein Fragezeichen, kein Warum."""
     text = str(s.get("text", "")).strip()
     # Alle Sätze aus dem Text durchgehen, ersten sauberen nehmen
     for sentence in re.split(r'(?<=[.!])\s+', text):
         sentence = sentence.strip()
-        if sentence and len(sentence) <= 70 and _hook_is_clean(sentence):
+        if sentence and len(sentence) <= 70 and hook_engine.is_clean_hook(sentence):
             return sentence
     # Absoluter Fallback
     return "Dein Gehirn macht das — ohne dass du es merkst."
 
 
-def _hook_is_clean(hook: str) -> bool:
-    h = hook.strip().lower()
-    if h.endswith("?"):
-        return False
-    for word in _HOOK_FORBIDDEN_START:
-        if h.startswith(word):
-            return False
-    return True
-
-
 def _filter_hooks(variants: list[str], short_id: str) -> list[str]:
-    clean = [h for h in variants if _hook_is_clean(h)]
+    clean = [h for h in variants if hook_engine.is_clean_hook(h)]
     removed = len(variants) - len(clean)
     if removed:
         print(f"[HOOK FILTER] {short_id}: {removed} verbotene Hook(s) entfernt, {len(clean)} verbleiben")
@@ -950,11 +937,11 @@ def _to_dataframe(data: dict | list, expected: int, raw: str, client: OpenAI, mo
             print(f"[HOOK FALLBACK] {short_id}: 'hook_variants' fehlt, nutze 'hook'")
             hook = str(s.get("hook", ""))
         # Finale Prüfung — wenn immer noch verboten, Fallback ohne GPT
-        if not _hook_is_clean(hook):
+        if not hook_engine.is_clean_hook(hook):
             print(f"[HOOK FILTER] {short_id}: Hook verboten → Fallback")
             _hook_log.append(f"{short_id}: FINALE PRÜFUNG VERBOTEN: '{hook}'")
             hook = _make_fallback_hook(s)
-        _hook_log.append(f"{short_id}: FINAL_HOOK='{hook}' clean={_hook_is_clean(hook)}")
+        _hook_log.append(f"{short_id}: FINAL_HOOK='{hook}' clean={hook_engine.is_clean_hook(hook)}")
         hook_engine.update_session_cache(hook)
 
         if len(hook) > _HOOK_MAX:
