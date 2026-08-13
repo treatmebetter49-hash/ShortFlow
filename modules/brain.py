@@ -998,6 +998,55 @@ _MONTHS_DE = [
 ]
 
 
+def generate_mix(
+    topic1: str,
+    topic2: str,
+    pct1: int,
+    total: int,
+    openai_key: str,
+    start_date: date | None = None,
+    provider: str = "openai",
+    fallback_key: str = "",
+    fallback_provider: str = "",
+    start_num: int = 1,
+    existing_hooks: list[str] | None = None,
+) -> pd.DataFrame:
+    """Generiert einen Mix aus zwei Themen mit gewichtetem Anteil.
+
+    pct1 = Anteil von topic1 in Prozent (z.B. 40 → 40% topic1, 60% topic2).
+    """
+    count1 = round(total * pct1 / 100)
+    count2 = total - count1
+
+    df1 = generate_table(
+        topic1, count1, openai_key,
+        start_date=start_date, provider=provider,
+        fallback_key=fallback_key, fallback_provider=fallback_provider,
+        start_num=start_num, existing_hooks=existing_hooks,
+    )
+
+    all_hooks = list(existing_hooks or []) + df1["Hook"].tolist()
+    df2 = generate_table(
+        topic2, count2, openai_key,
+        start_date=start_date, provider=provider,
+        fallback_key=fallback_key, fallback_provider=fallback_provider,
+        start_num=start_num + count1, existing_hooks=all_hooks,
+    )
+
+    # Zusammenführen und Shorts chronologisch durchnummerieren
+    combined = pd.concat([df1, df2], ignore_index=True)
+
+    # Datum aufsteigend sortieren damit die Reihenfolge stimmt
+    if "Datum" in combined.columns:
+        combined = combined.sort_values("Datum").reset_index(drop=True)
+
+    # Short-Nummern neu vergeben
+    for i, idx in enumerate(combined.index):
+        combined.at[idx, "Short"] = f"Short{start_num + i}"
+
+    return combined
+
+
 def make_project_dir(topic: str, base: Path | str, month: int | None = None, year: int | None = None) -> Path:
     today = date.today()
     month = month or today.month

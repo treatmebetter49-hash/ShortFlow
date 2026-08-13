@@ -62,18 +62,21 @@ class BrainTab(ctk.CTkFrame):
         ctk.CTkRadioButton(
             mode_row, text="Monat", variable=self._mode_var, value="monat",
             command=self._on_mode_change,
+        ).pack(side="left", padx=(0, 16))
+        ctk.CTkRadioButton(
+            mode_row, text="Mix", variable=self._mode_var, value="mix",
+            command=self._on_mode_change,
         ).pack(side="left")
 
-        # ── Top bar ───────────────────────────────────────────────────────────
-        top = ctk.CTkFrame(self, fg_color="transparent")
-        top.pack(fill="x", padx=20, pady=(0, 0))
+        # ── Normal top bar (Einzeln + Monat) ─────────────────────────────────
+        self._top_normal = ctk.CTkFrame(self, fg_color="transparent")
+        self._top_normal.pack(fill="x", padx=20, pady=(0, 0))
 
-        ctk.CTkLabel(top, text="Thema:").pack(side="left")
+        ctk.CTkLabel(self._top_normal, text="Thema:").pack(side="left")
         self._topic_var = tk.StringVar()
-        ctk.CTkEntry(top, textvariable=self._topic_var, width=150).pack(side="left", padx=(8, 20))
+        ctk.CTkEntry(self._top_normal, textvariable=self._topic_var, width=150).pack(side="left", padx=(8, 20))
 
-        # Container hält beide Modi — nimmt feste Position ein
-        _cnt = ctk.CTkFrame(top, fg_color="transparent")
+        _cnt = ctk.CTkFrame(self._top_normal, fg_color="transparent")
         _cnt.pack(side="left")
 
         # Einzeln-Bereich
@@ -86,7 +89,7 @@ class BrainTab(ctk.CTkFrame):
             values=[str(n) for n in range(1, 32)], width=75,
         ).pack(side="left", padx=(8, 20))
 
-        # Monat-Bereich (initial versteckt)
+        # Monat-Bereich
         _now = datetime.datetime.now()
         self._monat_frame = ctk.CTkFrame(_cnt, fg_color="transparent")
         ctk.CTkLabel(self._monat_frame, text="Monat:").pack(side="left")
@@ -104,11 +107,65 @@ class BrainTab(ctk.CTkFrame):
         self._month_count_lbl = ctk.CTkLabel(self._monat_frame, text=f"→ {_init_days} Shorts")
         self._month_count_lbl.pack(side="left", padx=(4, 20))
 
-        self._gen_btn = ctk.CTkButton(top, text="TABELLE GENERIEREN", command=self._start_generate,
-                                      **_GLASS)
+        self._gen_btn = ctk.CTkButton(self._top_normal, text="TABELLE GENERIEREN", command=self._start_generate, **_GLASS)
         self._gen_btn.pack(side="left")
-        self._status_lbl = ctk.CTkLabel(top, text="Bereit")
+        self._status_lbl = ctk.CTkLabel(self._top_normal, text="Bereit")
         self._status_lbl.pack(side="left", padx=(16, 0))
+
+        # ── Mix-Panel (eigene Sektion, initial versteckt) ────────────────────
+        self._top_mix = ctk.CTkFrame(self, fg_color="#111118", corner_radius=10)
+
+        # Zeile 1: Thema 1
+        _r1 = ctk.CTkFrame(self._top_mix, fg_color="transparent")
+        _r1.pack(fill="x", padx=16, pady=(12, 4))
+        ctk.CTkLabel(_r1, text="Thema 1:", width=80, anchor="w").pack(side="left")
+        self._mix_topic1_var = tk.StringVar()
+        ctk.CTkEntry(_r1, textvariable=self._mix_topic1_var, width=180).pack(side="left", padx=(0, 20))
+        ctk.CTkLabel(_r1, text="Anteil %:", width=70, anchor="w").pack(side="left")
+        self._mix_pct1_var = tk.StringVar(value="40")
+        ctk.CTkOptionMenu(
+            _r1, variable=self._mix_pct1_var,
+            values=[str(n) for n in range(10, 91, 10)], width=75,
+            command=self._on_mix_pct_change,
+        ).pack(side="left")
+        self._mix_pct1_lbl = ctk.CTkLabel(_r1, text="→ 40%", text_color="#cfa347")
+        self._mix_pct1_lbl.pack(side="left", padx=(8, 0))
+
+        # Zeile 2: Thema 2
+        _r2 = ctk.CTkFrame(self._top_mix, fg_color="transparent")
+        _r2.pack(fill="x", padx=16, pady=(4, 4))
+        ctk.CTkLabel(_r2, text="Thema 2:", width=80, anchor="w").pack(side="left")
+        self._mix_topic2_var = tk.StringVar()
+        ctk.CTkEntry(_r2, textvariable=self._mix_topic2_var, width=180).pack(side="left", padx=(0, 20))
+        ctk.CTkLabel(_r2, text="Anteil %:", width=70, anchor="w").pack(side="left")
+        self._mix_pct2_lbl = ctk.CTkLabel(_r2, text="60% (Rest)", text_color="#aaaaaa")
+        self._mix_pct2_lbl.pack(side="left")
+
+        # Zeile 3: Monat + Jahr + Shorts (auto)
+        _r3 = ctk.CTkFrame(self._top_mix, fg_color="transparent")
+        _r3.pack(fill="x", padx=16, pady=(4, 4))
+        ctk.CTkLabel(_r3, text="Monat:", width=80, anchor="w").pack(side="left")
+        self._mix_month_var = tk.StringVar(value=_MONTHS_DE[_now.month - 1])
+        ctk.CTkOptionMenu(
+            _r3, variable=self._mix_month_var, values=_MONTHS_DE,
+            width=110, command=self._update_mix_count,
+        ).pack(side="left", padx=(0, 8))
+        ctk.CTkLabel(_r3, text="Jahr:").pack(side="left")
+        self._mix_year_var = tk.StringVar(value=str(_now.year))
+        _mix_year_entry = ctk.CTkEntry(_r3, textvariable=self._mix_year_var, width=60)
+        _mix_year_entry.pack(side="left", padx=(8, 8))
+        _mix_year_entry.bind("<KeyRelease>", self._update_mix_count)
+        self._mix_count_lbl = ctk.CTkLabel(_r3, text=f"→ {_init_days} Shorts", text_color="#aaaaaa")
+        self._mix_count_lbl.pack(side="left", padx=(4, 0))
+        self._mix_count_var = tk.StringVar(value=str(_init_days))
+
+        # Zeile 4: Button
+        _r4 = ctk.CTkFrame(self._top_mix, fg_color="transparent")
+        _r4.pack(fill="x", padx=16, pady=(4, 12))
+        self._mix_gen_btn = ctk.CTkButton(_r4, text="MIX GENERIEREN", command=self._start_generate, **_GLASS)
+        self._mix_gen_btn.pack(side="left")
+        self._mix_status_lbl = ctk.CTkLabel(_r4, text="")
+        self._mix_status_lbl.pack(side="left", padx=(12, 0))
 
         # ── Progress bar ──────────────────────────────────────────────────────
         self._progress_bar = GradientProgressBar(self, height=6)
@@ -176,10 +233,13 @@ class BrainTab(ctk.CTkFrame):
     # ── Generation ────────────────────────────────────────────────────────────
 
     def _start_generate(self):
-        topic = self._topic_var.get().strip()
-        if not topic:
-            messagebox.showwarning("Fehler", "Bitte ein Thema eingeben.")
-            return
+        if self._mode_var.get() != "mix":
+            topic = self._topic_var.get().strip()
+            if not topic:
+                messagebox.showwarning("Fehler", "Bitte ein Thema eingeben.")
+                return
+        else:
+            topic = ""  # wird in mix-Zweig überschrieben
         count = self._get_count()
         cfg = self._get_config()
         start_date = self._get_start_date()
@@ -194,20 +254,68 @@ class BrainTab(ctk.CTkFrame):
             start_num = scan.next_short_num
             existing_hooks = scan.existing_hooks
         self._set_status("", busy=True)
-        threading.Thread(
-            target=self._generate,
-            args=(topic, count, api_key, start_date, provider, fallback_key, fallback_provider, start_num, existing_hooks),
-            daemon=True,
-        ).start()
+
+        if self._mode_var.get() == "mix":
+            topic = self._mix_topic1_var.get().strip()
+            topic2 = self._mix_topic2_var.get().strip()
+            if not topic:
+                messagebox.showwarning("Fehler", "Bitte Thema 1 eingeben.")
+                return
+            if not topic2:
+                messagebox.showwarning("Fehler", "Bitte Thema 2 eingeben.")
+                return
+            pct1 = int(self._mix_pct1_var.get())
+            count = int(self._mix_count_var.get())
+            import datetime as _dt
+            month = _MONTHS_DE.index(self._mix_month_var.get()) + 1
+            try:
+                year = int(self._mix_year_var.get())
+            except ValueError:
+                year = _dt.datetime.now().year
+            start_date = _dt.date(year, month, 1)
+            threading.Thread(
+                target=self._generate_mix,
+                args=(topic, topic2, pct1, count, api_key, start_date, provider, fallback_key, fallback_provider, start_num, existing_hooks),
+                daemon=True,
+            ).start()
+        else:
+            threading.Thread(
+                target=self._generate,
+                args=(topic, count, api_key, start_date, provider, fallback_key, fallback_provider, start_num, existing_hooks),
+                daemon=True,
+            ).start()
+
+    def _update_mix_count(self, *_):
+        month = _MONTHS_DE.index(self._mix_month_var.get()) + 1
+        try:
+            year = int(self._mix_year_var.get())
+        except ValueError:
+            return
+        days = calendar.monthrange(year, month)[1]
+        self._mix_count_var.set(str(days))
+        self._mix_count_lbl.configure(text=f"→ {days} Shorts")
+
+    def _on_mix_pct_change(self, *_):
+        pct1 = int(self._mix_pct1_var.get())
+        pct2 = 100 - pct1
+        self._mix_pct1_lbl.configure(text=f"→ {pct1}%")
+        self._mix_pct2_lbl.configure(text=f"{pct2}% (Rest)")
 
     def _on_mode_change(self):
-        if self._mode_var.get() == "einzeln":
-            self._monat_frame.pack_forget()
-            self._einzeln_frame.pack(side="left")
+        mode = self._mode_var.get()
+        if mode == "mix":
+            self._top_normal.pack_forget()
+            self._top_mix.pack(fill="x", padx=20, pady=(0, 4))
         else:
+            self._top_mix.pack_forget()
+            self._top_normal.pack(fill="x", padx=20, pady=(0, 0))
             self._einzeln_frame.pack_forget()
-            self._monat_frame.pack(side="left")
-            self._update_month_count()
+            self._monat_frame.pack_forget()
+            if mode == "einzeln":
+                self._einzeln_frame.pack(side="left")
+            else:
+                self._monat_frame.pack(side="left")
+                self._update_month_count()
 
     def _update_month_count(self, *_):
         month = _MONTHS_DE.index(self._month_var.get()) + 1
@@ -239,10 +347,21 @@ class BrainTab(ctk.CTkFrame):
             return _dt.date(year, month, 1)
         return _dt.date.today()
 
+    def _generate_mix(self, topic1: str, topic2: str, pct1: int, count: int, key: str, start_date=None, provider: str = "openai", fallback_key: str = "", fallback_provider: str = "", start_num: int = 1, existing_hooks: list[str] | None = None):
+        try:
+            df = brain.generate_mix(topic1, topic2, pct1, count, key, start_date=start_date, provider=provider, fallback_key=fallback_key, fallback_provider=fallback_provider, start_num=start_num, existing_hooks=existing_hooks)
+            self.after(0, self._on_success, df, f"Mix ({topic1}/{topic2})")
+        except Exception as exc:
+            import traceback
+            print("\n─── FEHLER IN _generate_mix ───")
+            print(traceback.format_exc())
+            print("──────────────────────────\n")
+            self.after(0, self._on_error, str(exc))
+
     def _generate(self, topic: str, count: int, key: str, start_date=None, provider: str = "openai", fallback_key: str = "", fallback_provider: str = "", start_num: int = 1, existing_hooks: list[str] | None = None):
         try:
             df = brain.generate_table(topic, count, key, start_date=start_date, provider=provider, fallback_key=fallback_key, fallback_provider=fallback_provider, start_num=start_num, existing_hooks=existing_hooks)
-            self.after(0, self._on_success, df)
+            self.after(0, self._on_success, df, topic)
         except Exception as exc:
             import traceback
             print("\n─── FEHLER IN _generate ───")
@@ -250,7 +369,7 @@ class BrainTab(ctk.CTkFrame):
             print("──────────────────────────\n")
             self.after(0, self._on_error, str(exc))
 
-    def _on_success(self, df: pd.DataFrame):
+    def _on_success(self, df: pd.DataFrame, topic: str | None = None):
         self._animating = False
         self._current_phase = 0
         self._cancel_phase_timer()
@@ -260,7 +379,8 @@ class BrainTab(ctk.CTkFrame):
         self._gen_btn.configure(state="normal")
         self._hooks_btn.configure(state="normal")
 
-        topic = self._topic_var.get().strip()
+        if topic is None:
+            topic = self._topic_var.get().strip()
         cfg = self._get_config()
         output_dir = cfg.get("output_dir", "").strip()
         if not output_dir:
