@@ -167,9 +167,14 @@ class BrainTab(ctk.CTkFrame):
         self._mix_status_lbl = ctk.CTkLabel(_r4, text="")
         self._mix_status_lbl.pack(side="left", padx=(12, 0))
 
+        # ── Timer (über dem Balken) ───────────────────────────────────────────
+        self._timer_lbl = ctk.CTkLabel(self, text="", text_color="#cfa347",
+                                       font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"))
+        self._timer_lbl.pack(anchor="e", padx=20, pady=(8, 0))
+
         # ── Progress bar ──────────────────────────────────────────────────────
         self._progress_bar = GradientProgressBar(self, height=6)
-        self._progress_bar.pack(fill="x", padx=20, pady=(8, 0))
+        self._progress_bar.pack(fill="x", padx=20, pady=(2, 0))
 
         # ── Table preview ─────────────────────────────────────────────────────
         preview_frame = ctk.CTkFrame(self)
@@ -373,6 +378,7 @@ class BrainTab(ctk.CTkFrame):
         self._animating = False
         self._current_phase = 0
         self._cancel_phase_timer()
+        self._timer_lbl.configure(text="")
         self._progress_bar.set(1.0)
         self._df = df
         self._render_table(df)
@@ -403,6 +409,7 @@ class BrainTab(ctk.CTkFrame):
         self._animating = False
         self._current_phase = 0
         self._cancel_phase_timer()
+        self._timer_lbl.configure(text="")
         self._progress_bar.set(0)
         self._gen_btn.configure(state="normal")
         self._status_lbl.configure(text="Fehler")
@@ -512,8 +519,10 @@ class BrainTab(ctk.CTkFrame):
             return
         self._elapsed_secs += 1
         s = self._elapsed_secs
-        time_str = f"{s // 60}m {s % 60:02d}s" if s >= 60 else f"{s}s"
-        self._status_lbl.configure(text=f"4/4 Tabelle wird gebaut · {time_str}")
+        time_str = f"{s // 60:02d}:{s % 60:02d}"
+        self._status_lbl.configure(text="4/4 Tabelle wird gebaut …")
+        self._mix_status_lbl.configure(text="Generierung läuft …")
+        self._timer_lbl.configure(text=f"⏱ {time_str}")
         self._phase_after_id = self.after(1000, self._tick_phase4)
 
     # ── Table rendering ───────────────────────────────────────────────────────
