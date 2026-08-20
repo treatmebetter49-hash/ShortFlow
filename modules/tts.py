@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 
 _VOICE_ID = "5KvpaGteYkNayiswuX2h"  # Wayne Steele
-_MODEL = "eleven_turbo_v2_5"
+_MODEL = "eleven_multilingual_v2"
 _API_URL = f"https://api.elevenlabs.io/v1/text-to-speech/{_VOICE_ID}"
 _SPEED = 1.15
 
